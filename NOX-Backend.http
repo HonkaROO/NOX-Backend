@@ -1,6 +1,237 @@
 @NOX_Backend_HostAddress = http://localhost:5164
+@https_HostAddress = https://localhost:7238
 
+# ============================================================================
+# AUTHENTICATION ENDPOINTS (Built-in ASP.NET Core Identity)
+# ============================================================================
+
+### 1. Register a new SuperAdmin user (first run to create admin account)
+POST {{NOX_Backend_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "superadmin@nox.local",
+  "password": "SuperAdmin@2024!Nox"
+}
+
+### 2. Register a new Admin (HR) user
+POST {{NOX_Backend_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "admin@nox.local",
+  "password": "Admin@2024!Nox"
+}
+
+### 3. Register a new regular User (Employee)
+POST {{NOX_Backend_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "employee@nox.local",
+  "password": "Employee@2024!Nox"
+}
+
+### 4. Login as SuperAdmin and get JWT token
+POST {{NOX_Backend_HostAddress}}/login?useCookies=false
+Content-Type: application/json
+
+{
+  "email": "superadmin@nox.local",
+  "password": "SuperAdmin@2024!Nox"
+}
+
+### 5. Login as Admin and get JWT token
+POST {{NOX_Backend_HostAddress}}/login?useCookies=false
+Content-Type: application/json
+
+{
+  "email": "admin@nox.local",
+  "password": "Admin@2024!Nox"
+}
+
+### 6. Login as Employee and get JWT token
+POST {{NOX_Backend_HostAddress}}/login?useCookies=false
+Content-Type: application/json
+
+{
+  "email": "employee@nox.local",
+  "password": "Employee@2024!Nox"
+}
+
+### 7. Refresh JWT token
+POST {{NOX_Backend_HostAddress}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+### 8. Logout
+POST {{NOX_Backend_HostAddress}}/logout
+Content-Type: application/json
+
+{}
+
+# ============================================================================
+# USER MANAGEMENT ENDPOINTS (SuperAdmin Only)
+# ============================================================================
+
+### 9. Get all users (SuperAdmin only)
+GET {{NOX_Backend_HostAddress}}/api/usermanagement
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 10. Get specific user by ID
+GET {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 11. Create a new user (SuperAdmin only)
+POST {{NOX_Backend_HostAddress}}/api/usermanagement
+Content-Type: application/json
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+{
+  "userName": "newuser@nox.local",
+  "email": "newuser@nox.local",
+  "password": "NewUser@2024!Nox",
+  "firstName": "John",
+  "lastName": "Doe",
+  "department": "Human Resources"
+}
+
+### 12. Update user information (SuperAdmin only)
+PUT {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
+Content-Type: application/json
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+{
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "department": "Finance",
+  "isActive": true
+}
+
+### 13. Deactivate a user account (SuperAdmin only)
+DELETE {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 14. Reset user password (SuperAdmin only)
+POST {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE/reset-password
+Content-Type: application/json
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+{
+  "newPassword": "ResetPassword@2024!Nox"
+}
+
+# ============================================================================
+# ROLE MANAGEMENT ENDPOINTS (SuperAdmin Only)
+# ============================================================================
+
+### 15. Get all available roles
+GET {{NOX_Backend_HostAddress}}/api/rolemanagement
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 16. Get roles assigned to a specific user
+GET {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 17. Assign a role to a user (SuperAdmin only)
+POST {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/assign
+Content-Type: application/json
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+{
+  "roleName": "Admin"
+}
+
+### 18. Remove a role from a user (SuperAdmin only)
+DELETE {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/remove/Admin
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 19. Get all users with a specific role
+GET {{NOX_Backend_HostAddress}}/api/rolemanagement/SuperAdmin/users
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 20. Get all Admin users
+GET {{NOX_Backend_HostAddress}}/api/rolemanagement/Admin/users
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 21. Get all Employee users
+GET {{NOX_Backend_HostAddress}}/api/rolemanagement/User/users
+Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN_HERE
+
+# ============================================================================
+# PROTECTED ENDPOINTS (Authorization Examples)
+# ============================================================================
+
+### 22. Get Weather Forecast (Admin and SuperAdmin only)
+GET {{NOX_Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+Authorization: Bearer YOUR_ADMIN_OR_SUPERADMIN_JWT_TOKEN_HERE
+
+### 23. Attempt to access Weather Forecast without authentication (should fail)
 GET {{NOX_Backend_HostAddress}}/weatherforecast/
 Accept: application/json
 
-###
+### 24. Attempt to access User Management without SuperAdmin role (should fail)
+GET {{NOX_Backend_HostAddress}}/api/usermanagement
+Authorization: Bearer YOUR_EMPLOYEE_JWT_TOKEN_HERE
+
+# ============================================================================
+# TESTING WORKFLOW
+# ============================================================================
+#
+# 1. Start the application:
+#    dotnet run --launch-profile http
+#
+# 2. First, register and create users:
+#    - Register SuperAdmin (if not already created by seeder)
+#    - Register Admin
+#    - Register Employee
+#
+# 3. Login and get JWT tokens:
+#    - Login as SuperAdmin, copy the accessToken
+#    - Login as Admin, copy the accessToken
+#    - Login as Employee, copy the accessToken
+#
+# 4. Test User Management (SuperAdmin only):
+#    - Get all users
+#    - Create a new user
+#    - Update user information
+#    - Reset user password
+#
+# 5. Test Role Management (SuperAdmin only):
+#    - Get all roles
+#    - Get user roles
+#    - Assign roles to users
+#    - Remove roles from users
+#    - Get users in each role
+#
+# 6. Test Authorization:
+#    - Access protected endpoints with valid tokens
+#    - Attempt to access endpoints with invalid/missing tokens
+#    - Attempt role-specific access with wrong role
+#
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# - Replace YOUR_SUPERADMIN_JWT_TOKEN_HERE with actual token from login response
+# - Replace YOUR_ADMIN_JWT_TOKEN_HERE with actual token from admin login
+# - Replace YOUR_EMPLOYEE_JWT_TOKEN_HERE with actual token from employee login
+# - Replace USER_ID_HERE with actual user ID from the system
+#
+# - The system seeds with default SuperAdmin:
+#   Email: superadmin@nox.local
+#   Password: SuperAdmin@2024!Nox
+#
+# - Three roles are available:
+#   - SuperAdmin: Full system access
+#   - Admin: Document and user management access
+#   - User: Employee access only
+#
+# - All endpoints are documented in Swagger/OpenAPI:
+#   http://localhost:5164/swagger/index.html (development only)
+#
+# ============================================================================
