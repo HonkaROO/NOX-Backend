@@ -7,11 +7,11 @@ using NOX_Backend.Models;
 namespace NOX_Backend.Controllers;
 
 /// <summary>
-/// API controller for managing users. Only SuperAdmin role can access these endpoints.
+/// API controller for managing users. Only SuperAdmin and Admin roles can access these endpoints.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin, Admin")]
 public class UserManagementController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -29,9 +29,30 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Get all users with their assigned roles.
+    /// Checks if the current user (Admin) is allowed to manage the target user.
+    /// SuperAdmin can manage anyone. Admin can only manage users with "User" role.
     /// </summary>
-    /// <returns>List of all users with role information</returns>
+    private async Task<bool> IsUserManageableByCurrentAdminAsync(ApplicationUser targetUser)
+    {
+        // SuperAdmin can manage anyone
+        if (User.IsInRole("SuperAdmin"))
+            return true;
+
+        // Admin can only manage User-role users
+        var targetUserRoles = await _userManager.GetRolesAsync(targetUser);
+        if (targetUserRoles.Contains("SuperAdmin") || targetUserRoles.Contains("Admin"))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Get all users with their assigned roles.
+    /// SuperAdmin sees all users. Admin sees only User-role accounts.
+    /// </summary>
+    /// <returns>List of users with role information</returns>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
     {
@@ -42,6 +63,10 @@ public class UserManagementController : ControllerBase
 
             foreach (var user in users)
             {
+                // Admins can only see User-role accounts; SuperAdmins see everyone
+                if (!await IsUserManageableByCurrentAdminAsync(user))
+                    continue;
+
                 var roles = await _userManager.GetRolesAsync(user);
                 userDtos.Add(MapToUserDto(user, roles));
             }
@@ -57,6 +82,7 @@ public class UserManagementController : ControllerBase
 
     /// <summary>
     /// Get a specific user by ID with their roles.
+    /// Admin can only retrieve User-role accounts.
     /// </summary>
     /// <param name="userId">The user's ID</param>
     /// <returns>User details with assigned roles</returns>
@@ -71,6 +97,12 @@ public class UserManagementController : ControllerBase
                 return NotFound(new { message = "User not found" });
             }
 
+            // Check if current user has permission to view this user
+            if (!await IsUserManageableByCurrentAdminAsync(user))
+            {
+                return Forbid();
+            }
+
             var roles = await _userManager.GetRolesAsync(user);
             return Ok(MapToUserDto(user, roles));
         }
@@ -82,7 +114,7 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new user account. SuperAdmin only.
+    /// Create a new user account. SuperAdmin can create any role. Admin can only create User role accounts.
     /// </summary>
     /// <param name="request">User creation request with credentials and details</param>
     /// <returns>Created user information</returns>
@@ -96,6 +128,12 @@ public class UserManagementController : ControllerBase
 
         try
         {
+            // Admin users can only create User-role accounts
+            if (User.IsInRole("Admin") && !string.IsNullOrEmpty(request.Role) && request.Role != "User")
+            {
+                return Forbid();
+            }
+
             // Check if user already exists
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
             if (existingUser != null)
@@ -123,11 +161,12 @@ public class UserManagementController : ControllerBase
                 return BadRequest(new { message = "Failed to create user", errors });
             }
 
-            // Assign default "User" role to new users
-            await _userManager.AddToRoleAsync(user, "User");
+            // Assign role - default to "User" if not specified or if Admin creating
+            var roleToAssign = string.IsNullOrEmpty(request.Role) ? "User" : request.Role;
+            await _userManager.AddToRoleAsync(user, roleToAssign);
 
             var roles = await _userManager.GetRolesAsync(user);
-            _logger.LogInformation("User {UserId} created by SuperAdmin", user.Id);
+            _logger.LogInformation("User {UserId} created with role {Role}", user.Id, roleToAssign);
             return CreatedAtAction(nameof(GetUserById), new { userId = user.Id }, MapToUserDto(user, roles));
         }
         catch (Exception ex)
@@ -138,7 +177,7 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Update user information. SuperAdmin only.
+    /// Update user information. Admin can only update User-role accounts.
     /// </summary>
     /// <param name="userId">The user's ID</param>
     /// <param name="request">User update request</param>
@@ -152,6 +191,12 @@ public class UserManagementController : ControllerBase
             if (user == null)
             {
                 return NotFound(new { message = "User not found" });
+            }
+
+            // Check if current user has permission to update this user
+            if (!await IsUserManageableByCurrentAdminAsync(user))
+            {
+                return Forbid();
             }
 
             // Update user properties
@@ -174,7 +219,7 @@ public class UserManagementController : ControllerBase
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            _logger.LogInformation("User {UserId} updated by SuperAdmin", userId);
+            _logger.LogInformation("User {UserId} updated", userId);
             return Ok(MapToUserDto(user, roles));
         }
         catch (Exception ex)
@@ -185,7 +230,7 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Deactivate a user account. SuperAdmin only.
+    /// Deactivate a user account. Admin can only deactivate User-role accounts.
     /// </summary>
     /// <param name="userId">The user's ID</param>
     /// <returns>Deactivation result</returns>
@@ -198,6 +243,12 @@ public class UserManagementController : ControllerBase
             if (user == null)
             {
                 return NotFound(new { message = "User not found" });
+            }
+
+            // Check if current user has permission to deactivate this user
+            if (!await IsUserManageableByCurrentAdminAsync(user))
+            {
+                return Forbid();
             }
 
             // Don't allow deactivation of the account making the request
@@ -216,7 +267,7 @@ public class UserManagementController : ControllerBase
                 return BadRequest(new { message = "Failed to deactivate user", errors });
             }
 
-            _logger.LogInformation("User {UserId} deactivated by SuperAdmin", userId);
+            _logger.LogInformation("User {UserId} deactivated", userId);
             return NoContent();
         }
         catch (Exception ex)
@@ -227,7 +278,7 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Reset a user's password. SuperAdmin only.
+    /// Reset a user's password. Admin can only reset password for User-role accounts.
     /// </summary>
     /// <param name="userId">The user's ID</param>
     /// <param name="request">New password request</param>
@@ -241,6 +292,12 @@ public class UserManagementController : ControllerBase
             if (user == null)
             {
                 return NotFound(new { message = "User not found" });
+            }
+
+            // Check if current user has permission to reset password for this user
+            if (!await IsUserManageableByCurrentAdminAsync(user))
+            {
+                return Forbid();
             }
 
             // Remove old password
@@ -259,7 +316,7 @@ public class UserManagementController : ControllerBase
                 return BadRequest(new { message = "Failed to set new password", errors });
             }
 
-            _logger.LogInformation("Password reset for user {UserId} by SuperAdmin", userId);
+            _logger.LogInformation("Password reset for user {UserId}", userId);
             return Ok(new { message = "Password has been reset successfully" });
         }
         catch (Exception ex)
