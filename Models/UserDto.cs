@@ -58,3 +58,22 @@ public class AssignRoleRequest
 {
     public string RoleName { get; set; } = null!;
 }
+
+/// <summary>
+/// Request DTO for user login.
+/// </summary>
+public class LoginRequest
+{
+    public string Email { get; set; } = null!;
+    public string Password { get; set; } = null!;
+}
+
+/// <summary>
+/// Request DTO for user updating their own profile.
+/// </summary>
+public class UpdateProfileRequest
+{
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? Department { get; set; }
+}

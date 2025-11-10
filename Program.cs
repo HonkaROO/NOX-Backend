@@ -8,10 +8,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
-    .AddRoles<IdentityRole>()
+
+// Configure Identity with cookie-based authentication
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.SignIn.RequireConfirmedEmail = false;
+})
     .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
+
+// Configure cookie authentication
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/api/authentication/login";
+    options.LogoutPath = "/api/authentication/logout";
+    options.AccessDeniedPath = "/api/authentication/access-denied";
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+});
 
 builder.Services.AddScoped<RoleSeederService>();
 
@@ -39,9 +54,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapIdentityApi<ApplicationUser>();
 
 app.MapControllers();
 
