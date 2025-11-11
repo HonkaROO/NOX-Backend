@@ -177,6 +177,10 @@ public class UserManagementController : ControllerBase
                 EmailConfirmed = true,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
+                Phone = request.Phone,
+                Address = request.Address,
+                StartDate = request.StartDate,
+                EmployeeId = request.EmployeeId,
                 DepartmentId = request.DepartmentId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
@@ -245,6 +249,14 @@ public class UserManagementController : ControllerBase
                 user.FirstName = request.FirstName;
             if (!string.IsNullOrEmpty(request.LastName))
                 user.LastName = request.LastName;
+            if (!string.IsNullOrEmpty(request.Phone))
+                user.Phone = request.Phone;
+            if (!string.IsNullOrEmpty(request.Address))
+                user.Address = request.Address;
+            if (request.StartDate.HasValue)
+                user.StartDate = request.StartDate;
+            if (!string.IsNullOrEmpty(request.EmployeeId))
+                user.EmployeeId = request.EmployeeId;
             if (request.DepartmentId.HasValue)
             {
                 // Validate that the department exists
@@ -389,6 +401,10 @@ public class UserManagementController : ControllerBase
             Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
+            Phone = user.Phone,
+            Address = user.Address,
+            StartDate = user.StartDate,
+            EmployeeId = user.EmployeeId,
             DepartmentId = user.DepartmentId,
             DepartmentName = department?.Name,
             IsActive = user.IsActive,
