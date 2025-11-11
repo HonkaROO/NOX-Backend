@@ -19,9 +19,20 @@ public class ApplicationUser : IdentityUser
     public string? LastName { get; set; }
 
     /// <summary>
-    /// User's department within the organization.
+    /// Foreign key to the department this user belongs to.
     /// </summary>
-    public string? Department { get; set; }
+    public int DepartmentId { get; set; }
+
+    /// <summary>
+    /// Navigation property: Department this user belongs to.
+    /// </summary>
+    public virtual Department? Department { get; set; }
+
+    /// <summary>
+    /// Navigation property: Department managed by this user (if any).
+    /// A user can manage at most one department, and must belong to that department.
+    /// </summary>
+    public virtual Department? ManagedDepartment { get; set; }
 
     /// <summary>
     /// Indicates whether the user account is active. Allows for soft deactivation without deleting.

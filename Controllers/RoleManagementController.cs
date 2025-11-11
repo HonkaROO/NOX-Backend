@@ -220,7 +220,7 @@ public class RoleManagementController : ControllerBase
             foreach (var user in usersInRole)
             {
                 var roles = rolesDictionary.ContainsKey(user.Id) ? rolesDictionary[user.Id] : new List<string>();
-                userDtos.Add(MapToUserDto(user, roles));
+                userDtos.Add(await MapToUserDtoAsync(user, roles));
             }
 
             return Ok(userDtos);
@@ -235,8 +235,9 @@ public class RoleManagementController : ControllerBase
     /// <summary>
     /// Helper method to map ApplicationUser to UserDto.
     /// </summary>
-    private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
+    private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user, IList<string> roles)
     {
+        var department = await _context.Departments.FindAsync(user.DepartmentId);
         return new UserDto
         {
             Id = user.Id,
@@ -244,7 +245,8 @@ public class RoleManagementController : ControllerBase
             Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Department = user.Department,
+            DepartmentId = user.DepartmentId,
+            DepartmentName = department?.Name,
             IsActive = user.IsActive,
             EmailConfirmed = user.EmailConfirmed,
             CreatedAt = user.CreatedAt,

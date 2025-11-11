@@ -23,15 +23,18 @@ public class AuthenticationController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly AppDbContext _context;
     private readonly ILogger<AuthenticationController> _logger;
 
     public AuthenticationController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        AppDbContext context,
         ILogger<AuthenticationController> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _context = context;
         _logger = logger;
     }
 
@@ -79,7 +82,7 @@ public class AuthenticationController : ControllerBase
             var roles = await _userManager.GetRolesAsync(user);
             _logger.LogInformation("User {UserId} logged in successfully", user.Id);
 
-            return Ok(MapToUserDto(user, roles));
+            return Ok(await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -147,7 +150,7 @@ public class AuthenticationController : ControllerBase
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return Ok(MapToUserDto(user, roles));
+            return Ok(await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -187,8 +190,6 @@ public class AuthenticationController : ControllerBase
                 user.FirstName = request.FirstName;
             if (!string.IsNullOrEmpty(request.LastName))
                 user.LastName = request.LastName;
-            if (!string.IsNullOrEmpty(request.Department))
-                user.Department = request.Department;
 
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -201,7 +202,7 @@ public class AuthenticationController : ControllerBase
 
             var roles = await _userManager.GetRolesAsync(user);
             _logger.LogInformation("User {UserId} updated their profile", user.Id);
-            return Ok(MapToUserDto(user, roles));
+            return Ok(await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -213,8 +214,9 @@ public class AuthenticationController : ControllerBase
     /// <summary>
     /// Helper method to map ApplicationUser to UserDto.
     /// </summary>
-    private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
+    private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user, IList<string> roles)
     {
+        var department = await _context.Departments.FindAsync(user.DepartmentId);
         return new UserDto
         {
             Id = user.Id,
@@ -222,7 +224,8 @@ public class AuthenticationController : ControllerBase
             Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Department = user.Department,
+            DepartmentId = user.DepartmentId,
+            DepartmentName = department?.Name,
             IsActive = user.IsActive,
             EmailConfirmed = user.EmailConfirmed,
             CreatedAt = user.CreatedAt,

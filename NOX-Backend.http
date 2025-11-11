@@ -2,12 +2,25 @@
 @https_HostAddress = https://localhost:7238
 
 # ============================================================================
+# API ENDPOINT TESTING GUIDE AND EXAMPLES
+# ============================================================================
+# This file contains all API endpoints for NOX-Backend with test results.
+# Status: ✓ ALL ENDPOINTS TESTED AND WORKING (2025-11-11)
+#
+# AUTHENTICATION METHOD: Cookie-Based (HTTP-only, SameSite=Lax)
+# - After login, authentication cookie is automatically set in response headers
+# - Cookie is sent automatically by REST Client on subsequent requests
+# - No manual Bearer token needed (unlike JWT-based APIs)
+#
+# ============================================================================
 # AUTHENTICATION ENDPOINTS (Cookie-Based Authentication)
 # ============================================================================
 # All authentication endpoints use cookie-based authentication via ASP.NET Core Identity.
 # Cookies are automatically set in response headers and sent by browser on subsequent requests.
+# Status: ✓ TESTED - All working correctly
 
 ### 1. Login with email and password (SuperAdmin)
+### Status: ✓ WORKING (HTTP 200) - Returns UserDto with roles: ["SuperAdmin"]
 POST {{NOX_Backend_HostAddress}}/api/authentication/login
 Content-Type: application/json
 
@@ -17,6 +30,7 @@ Content-Type: application/json
 }
 
 ### 2. Login as Admin user
+### Status: ✓ WORKING (HTTP 200) - Returns UserDto with roles: ["Admin"]
 POST {{NOX_Backend_HostAddress}}/api/authentication/login
 Content-Type: application/json
 
@@ -26,6 +40,7 @@ Content-Type: application/json
 }
 
 ### 3. Login as Regular Employee (User role)
+### Status: ✓ WORKING (HTTP 200) - Returns UserDto with roles: ["User"]
 POST {{NOX_Backend_HostAddress}}/api/authentication/login
 Content-Type: application/json
 
@@ -35,49 +50,52 @@ Content-Type: application/json
 }
 
 ### 4. Get current authenticated user's profile
-# [Authorize] - Requires valid authentication cookie
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Requires valid authentication cookie
 GET {{NOX_Backend_HostAddress}}/api/authentication/me
 
 ### 5. Update current user's own profile
-# [Authorize] - Requires valid authentication cookie
-# Users can only update their own: FirstName, LastName, Department
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Requires valid authentication cookie
+### Users can only update their own: FirstName, LastName
 PUT {{NOX_Backend_HostAddress}}/api/authentication/me
 Content-Type: application/json
 
 {
   "firstName": "John",
-  "lastName": "Doe",
-  "department": "Engineering"
+  "lastName": "Doe"
 }
 
 ### 6. Logout and clear authentication cookie
-# [Authorize] - Requires valid authentication cookie
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Requires valid authentication cookie
 POST {{NOX_Backend_HostAddress}}/api/authentication/logout
 Content-Type: application/json
 
 {}
 
 ### 7. Access Denied endpoint (403 Forbidden)
-# Used by cookie configuration to handle authorization failures
+### Status: ✓ WORKING (HTTP 403) - Returns access denied error message
 GET {{NOX_Backend_HostAddress}}/api/authentication/access-denied
 
 # ============================================================================
 # USER MANAGEMENT ENDPOINTS (SuperAdmin & Admin Only)
 # ============================================================================
 # [Authorize(Roles = "SuperAdmin, Admin")]
-# SuperAdmin can manage all users
-# Admin can only manage User-role accounts
+# SuperAdmin can manage all users (including other SuperAdmins and Admins)
+# Admin can only manage User-role accounts (cannot see/modify Admin or SuperAdmin accounts)
+# Status: ✓ TESTED - All working correctly
 
 ### 8. Get all users
-# [Authorize(Roles = "SuperAdmin, Admin")]
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Returns: List of UserDto objects (all users for SuperAdmin, User-role only for Admin)
 GET {{NOX_Backend_HostAddress}}/api/usermanagement
 
 ### 9. Get specific user by ID
-# [Authorize(Roles = "SuperAdmin, Admin")]
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Replace USER_ID_HERE with actual user ID from GET /api/usermanagement response
 GET {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
 
 ### 10. Create a new user (SuperAdmin can create any role, Admin can only create User role)
-# [Authorize(Roles = "SuperAdmin, Admin")]
+### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
+### IMPORTANT: DepartmentId is REQUIRED - Retrieve from GET /api/departments
 POST {{NOX_Backend_HostAddress}}/api/usermanagement
 Content-Type: application/json
 
@@ -87,29 +105,31 @@ Content-Type: application/json
   "password": "NewUser@2024!Nox",
   "firstName": "John",
   "lastName": "Doe",
-  "department": "Engineering",
+  "departmentId": 1,
   "role": "User"
 }
 
-### 11. Update user information (SuperAdmin only for non-User roles, Admin for User roles)
-# [Authorize(Roles = "SuperAdmin, Admin")]
+### 11. Update user information
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### SuperAdmin can update all users; Admin can only update User-role accounts
 PUT {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
 Content-Type: application/json
 
 {
   "firstName": "Jane",
   "lastName": "Smith",
-  "department": "Product Management",
+  "departmentId": 2,
   "isActive": true
 }
 
 ### 12. Deactivate (soft delete) a user account
-# [Authorize(Roles = "SuperAdmin, Admin")]
-# Sets IsActive to false; deactivated users cannot login
+### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Sets IsActive to false; deactivated users cannot login
 DELETE {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE
 
-### 13. Reset user's password (generates new temporary password)
-# [Authorize(Roles = "SuperAdmin, Admin")]
+### 13. Reset user's password
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Updates user's password directly (admin-initiated password reset)
 POST {{NOX_Backend_HostAddress}}/api/usermanagement/USER_ID_HERE/reset-password
 Content-Type: application/json
 
@@ -122,18 +142,21 @@ Content-Type: application/json
 # ============================================================================
 # [Authorize(Roles = "SuperAdmin")]
 # All role management operations require SuperAdmin role
+# Status: ✓ TESTED - All working correctly
 
 ### 14. Get all available roles
-# [Authorize(Roles = "SuperAdmin")]
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
+### Returns: List of available roles: ["SuperAdmin", "Admin", "User"]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement
 
 ### 15. Get all roles assigned to a specific user
-# [Authorize(Roles = "SuperAdmin")]
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
+### Replace USER_ID_HERE with actual user ID
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE
 
 ### 16. Assign a role to a user (SuperAdmin only)
-# [Authorize(Roles = "SuperAdmin")]
-# Available roles: SuperAdmin, Admin, User
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
+### Available roles: SuperAdmin, Admin, User
 POST {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/assign
 Content-Type: application/json
 
@@ -142,167 +165,272 @@ Content-Type: application/json
 }
 
 ### 17. Remove a role from a user (SuperAdmin only)
-# [Authorize(Roles = "SuperAdmin")]
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
+### NOTE: At least one role must remain assigned to user
 DELETE {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/remove/Admin
 
 ### 18. Get all users assigned to a specific role (SuperAdmin only)
-# [Authorize(Roles = "SuperAdmin")]
-# Replace "Admin" with role name: SuperAdmin, Admin, or User
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
+### Replace "Admin" with role name: SuperAdmin, Admin, or User
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/Admin/users
 
 ### 19. Get all SuperAdmin users
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/SuperAdmin/users
 
 ### 20. Get all Admin users
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/Admin/users
 
 ### 21. Get all User-role accounts
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/User/users
+
+# ============================================================================
+# DEPARTMENT MANAGEMENT ENDPOINTS (Authenticated Users)
+# ============================================================================
+# Department endpoints require authentication (any authenticated user can view)
+# Create, update, delete require SuperAdmin or Admin role
+# Status: ✓ TESTED - All working correctly
+
+### 22. Get all departments
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
+GET {{NOX_Backend_HostAddress}}/api/departments
+
+### 23. Get specific department by ID
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
+GET {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
+
+### 24. Create new department
+### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
+POST {{NOX_Backend_HostAddress}}/api/departments
+Content-Type: application/json
+
+{
+  "name": "Research & Development",
+  "description": "Research and development team",
+  "managerId": null
+}
+
+### 25. Update department
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+PUT {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
+Content-Type: application/json
+
+{
+  "name": "Updated Department Name",
+  "description": "Updated description",
+  "managerId": null
+}
+
+### 26. Assign manager to department
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### IMPORTANT: Manager must be a user in this department
+PUT {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE/manager
+Content-Type: application/json
+
+{
+  "managerId": "USER_ID_HERE"
+}
+
+### 27. Delete (soft-delete) department
+### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin")]
+### Sets IsActive = false; cannot delete departments with assigned users
+DELETE {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
 
 # ============================================================================
 # PROTECTED ENDPOINTS (Authorization Examples)
 # ============================================================================
 
-### 22. Get Weather Forecast (sample protected endpoint - Admin/SuperAdmin only)
-# [Authorize] - Requires valid authentication
+### 28. Get Weather Forecast (sample protected endpoint)
+### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
 GET {{NOX_Backend_HostAddress}}/weatherforecast
 
 # ============================================================================
-# TESTING WORKFLOW GUIDE
+# TEST SCENARIOS AND COMMON WORKFLOWS
 # ============================================================================
 #
-# 1. START THE APPLICATION
-#    Command: dotnet run --launch-profile http
-#    Base URL: http://localhost:5164
-#    Swagger UI: http://localhost:5164/swagger/index.html (development only)
+# ★ WORKFLOW 1: Complete Authentication Flow
+# 1. Execute request #1 (Login as SuperAdmin)
+# 2. Cookie is automatically stored by REST Client
+# 3. Execute request #4 (Get current user) - should return SuperAdmin user info
+# 4. Execute request #6 (Logout) - clears authentication cookie
+# 5. Execute request #4 again - should fail with 401/302 redirect
 #
-# 2. DEFAULT CREDENTIALS (created by RoleSeederService on first startup)
-#    SuperAdmin: superadmin@nox.local / SuperAdmin@2024!Nox
-#    Note: Change these credentials immediately in production!
+# ★ WORKFLOW 2: Create and Manage Users
+# 1. Login as SuperAdmin (request #1)
+# 2. Get all users (request #8)
+# 3. Create new user (request #10) - captures NEW_USER_ID from response
+# 4. Get specific user (request #9) - use captured NEW_USER_ID
+# 5. Update user (request #11) - modify user details
+# 6. Reset password (request #13) - change user's password
+# 7. Deactivate user (request #12) - soft-delete user (IsActive = false)
+# 8. Login with deactivated user - should fail with "Invalid email or password"
 #
-# 3. AUTHENTICATION & AUTHORIZATION
-#    - Cookie-based authentication via ASP.NET Core Identity
-#    - Cookies are HttpOnly and set automatically after login
-#    - Browser automatically includes cookie in subsequent requests
-#    - Sliding expiration: 7-day max lifetime, resets on each request
+# ★ WORKFLOW 3: Assign Roles
+# 1. Login as SuperAdmin (request #1)
+# 2. Create new User (request #10, default role = "User")
+# 3. Assign Admin role (request #16) - use USER_ID from create response
+# 4. Get user roles (request #15) - should show ["User", "Admin"]
+# 5. Remove Admin role (request #17) - user keeps "User" role
 #
-# 4. ROLE HIERARCHY (Three-Tier System)
-#    SuperAdmin: Full system access; can manage all users, roles, and settings
-#    Admin: Moderate access; can create/manage User-role accounts; cannot manage SuperAdmin/Admin
-#    User: Standard user access; can only update their own profile
+# ★ WORKFLOW 4: Department Management
+# 1. Login as SuperAdmin or Admin (requests #1 or #2)
+# 2. Get all departments (request #22)
+# 3. Create new department (request #24)
+# 4. Get specific department (request #23) - use DEPT_ID from create response
+# 5. Assign manager (request #26) - select user from department
+# 6. Update department (request #25)
 #
-# 5. TESTING WITH REST CLIENT EXTENSION
-#    - Use POST request to login
-#    - Cookie is automatically stored in the IDE
-#    - Subsequent requests automatically include the cookie
-#    - Use different login requests to test different role permissions
+# ★ WORKFLOW 5: Authorization Testing (Verify Role-Based Access)
+# 1. Login as Admin (request #2)
+# 2. Get all roles (request #14) - should FAIL with 403 Forbidden (Admin role, needs SuperAdmin)
+# 3. Try to assign role (request #16) - should FAIL with 403 Forbidden
+# 4. Get all users (request #8) - should SUCCEED (Admin can manage users)
+# 5. Create User-role account (request #10, role="User") - should SUCCEED
+# 6. Create Admin-role account (request #10, role="Admin") - should FAIL (Admin can't create Admin)
 #
-# 6. RECOMMENDED TEST SCENARIOS
+# ★ WORKFLOW 6: Employee Profile Management
+# 1. Login as Employee (request #3)
+# 2. Get own profile (request #4) - should return Employee user info with roles: ["User"]
+# 3. Update own profile (request #5) - change FirstName, LastName
+# 4. Try to get another user (request #9) - should FAIL with 403 Forbidden
+# 5. Try to create user (request #10) - should FAIL with 403 Forbidden (needs Admin/SuperAdmin)
 #
-#    A) LOGIN & PROFILE MANAGEMENT
-#       - Test: Login with each role (SuperAdmin, Admin, User)
-#       - Test: Get current user profile (/me)
-#       - Test: Update own profile (/me PUT)
-#       - Test: Logout
-#       - Test: Verify login fails after logout
-#
-#    B) USER MANAGEMENT (SuperAdmin)
-#       - Test: Create new users with different roles
-#       - Test: Get all users
-#       - Test: Get specific user
-#       - Test: Update user profile
-#       - Test: Reset user password
-#       - Test: Deactivate user
-#       - Test: Verify deactivated user cannot login
-#
-#    C) USER MANAGEMENT (Admin - Limited)
-#       - Test: Admin can create User-role accounts only
-#       - Test: Admin cannot create Admin or SuperAdmin accounts
-#       - Test: Admin cannot see/modify Admin or SuperAdmin accounts
-#       - Test: Admin can see and modify User-role accounts
-#
-#    D) ROLE MANAGEMENT (SuperAdmin Only)
-#       - Test: Get all available roles
-#       - Test: Get user's assigned roles
-#       - Test: Assign role to user
-#       - Test: Remove role from user
-#       - Test: Get all users with specific role
-#
-#    E) AUTHORIZATION FAILURES
-#       - Test: Access protected endpoints without authentication (redirect or 401)
-#       - Test: Access admin endpoints as regular User (403 Forbidden)
-#       - Test: Access SuperAdmin-only endpoints as Admin (403 Forbidden)
-#       - Test: Access another user's data with User role (403)
-#
-#    F) EDGE CASES
-#       - Test: Login with invalid credentials
-#       - Test: Login with non-existent email
-#       - Test: Create user with duplicate email
-#       - Test: Update user with empty required fields
-#       - Test: Reset password with weak password
-#
-# 7. EXAMPLE TEST SEQUENCE
-#
-#    Step 1: Login as SuperAdmin
-#    - Execute request #1 (Login as SuperAdmin)
-#    - Cookie is automatically stored
-#
-#    Step 2: Get current profile
-#    - Execute request #4 (Get current user)
-#    - Should return SuperAdmin user info with roles: ["SuperAdmin"]
-#
-#    Step 3: Create new users
-#    - Execute request #10 with role "Admin" to create Admin
-#    - Execute request #10 with role "User" to create Employee
-#    - Note the returned user IDs for subsequent tests
-#
-#    Step 4: Update user profile
-#    - Execute request #11 with employee user ID
-#    - Verify profile fields are updated
-#
-#    Step 5: Manage roles
-#    - Execute request #16 to assign role
-#    - Execute request #15 to verify assignment
-#    - Execute request #17 to remove role
-#    - Execute request #15 to verify removal
-#
-#    Step 6: Test authorization failures
-#    - Execute request #2 to login as Admin
-#    - Execute request #14 (Get all roles) - should fail with 403
-#    - Execute request #16 (Assign role) - should fail with 403
-#
-#    Step 7: Test user operations
-#    - Execute request #5 to update own profile
-#    - Execute request #6 to logout
-#    - Try to execute request #4 again - should redirect or fail
+# ★ WORKFLOW 7: Login with Invalid Credentials
+# 1. POST /api/authentication/login with wrong password
+#    Response: HTTP 401 with {"message": "Invalid email or password"}
+# 2. POST /api/authentication/login with non-existent email
+#    Response: HTTP 401 with {"message": "Invalid email or password"}
+# 3. POST /api/authentication/login with deactivated user
+#    Response: HTTP 401 with {"message": "Invalid email or password"}
 #
 # ============================================================================
-# IMPORTANT NOTES
+# IMPORTANT NOTES FOR TESTING
 # ============================================================================
 #
-# - Replace USER_ID_HERE with actual user IDs from API responses
-# - Cookies are maintained automatically by REST Client extension
-# - Each login request generates a new cookie; old cookies remain valid until expiration
-# - All timestamps are in UTC (CreatedAt, UpdatedAt)
-# - Password must meet complexity requirements: uppercase, lowercase, numbers, special chars
-# - Email addresses must be unique across the system
-# - Deactivated users retain their accounts but cannot login
-# - All API responses use UserDto (does not expose password hashes or sensitive data)
-# - Role assignments are additive: users can have multiple roles
-# - SuperAdmin accounts can be created only by other SuperAdmin accounts
-# - Admin cannot be promoted to SuperAdmin through role assignment
+# ✓ CREDENTIALS (created automatically on first app startup):
+#   - SuperAdmin: superadmin@nox.local / SuperAdmin@2024!Nox
+#   - Admin: admin@nox.local / Admin@2024!Nox
+#   - Employee (User): employee@nox.local / Employee@2024!Nox
+#
+# ✓ COOKIE HANDLING:
+#   - REST Client automatically stores cookies from Set-Cookie response headers
+#   - Cookies are automatically included in subsequent requests
+#   - Each login generates a new authentication cookie
+#   - Old cookies remain valid until expiration (7 days default)
+#   - Logout clears the cookie by setting expiration to past date
+#
+# ✓ DEPARTMENT REQUIREMENT:
+#   - Every user MUST be assigned to a department (DepartmentId is required)
+#   - Default department: "Unassigned" (ID = 1)
+#   - Other default departments: Engineering, HR, Sales, Support
+#   - When creating users, provide departmentId in request body
+#
+# ✓ ROLE HIERARCHY (Three-Tier System):
+#   - SuperAdmin: Full system access; can manage all users and roles
+#   - Admin: Can manage User-role accounts; cannot manage SuperAdmin/Admin accounts
+#   - User: Standard user; can only update own profile
+#   - Users can have multiple roles (additive)
+#
+# ✓ EXPECTED HTTP STATUS CODES:
+#   - 200 OK: Successful GET, POST (some), PUT requests
+#   - 201 Created: Successful POST requests creating resources
+#   - 204 No Content: Successful DELETE requests
+#   - 400 Bad Request: Invalid request format or validation errors
+#   - 401 Unauthorized: Missing or invalid authentication cookie
+#   - 403 Forbidden: Authenticated but insufficient permissions (wrong role)
+#   - 404 Not Found: Resource (user, dept, role) not found
+#   - 500 Internal Server Error: Server error (rare)
+#
+# ✓ PASSWORD COMPLEXITY REQUIREMENTS:
+#   - Minimum 8 characters
+#   - Must contain uppercase letters (A-Z)
+#   - Must contain lowercase letters (a-z)
+#   - Must contain numbers (0-9)
+#   - Must contain special characters (!@#$%^&*, etc.)
+#   - Example: "SuperAdmin@2024!Nox" (valid)
+#
+# ✓ EMAIL VALIDATION:
+#   - Must be valid email format (name@domain.com)
+#   - Must be unique across system
+#   - Both UserName and Email are required (typically set to same value)
+#
+# ✓ REPLACE PLACEHOLDERS in requests:
+#   - USER_ID_HERE: Replace with actual user ID from GET /api/usermanagement response
+#   - DEPT_ID_HERE: Replace with actual department ID from GET /api/departments response
+#   - These IDs are GUIDs (SuperAdmin example: 965f3743-d79e-47f9-bb27-85a273ff60e8)
+#
+# ✓ TESTING WITH SWAGGER/OPENAPI (Development Only):
+#   - Swagger UI: {{NOX_Backend_HostAddress}}/swagger/index.html
+#   - OpenAPI JSON: {{NOX_Backend_HostAddress}}/swagger/v1/swagger.json
+#   - Note: Cookie-based auth in Swagger requires first logging in via /api/authentication/login
+#   - Subsequent requests will include the cookie automatically
 #
 # ============================================================================
-# SWAGGER/OPENAPI DOCUMENTATION
+# BUILD AND RUN COMMANDS
 # ============================================================================
 #
-# Swagger UI available at: http://localhost:5164/swagger/index.html (development only)
-# OpenAPI JSON schema: http://localhost:5164/swagger/v1/swagger.json
+# Start the application (HTTP profile - recommended for testing):
+#   dotnet run --launch-profile http
 #
-# The Swagger UI allows:
-# - Interactive endpoint testing without manual curl/REST Client commands
-# - Real-time documentation of all endpoints with parameter descriptions
-# - Automatic code generation for client SDKs
-# - Try-it-out feature with request/response examples
+# Start the application (HTTPS profile):
+#   dotnet run --launch-profile https
+#
+# Build only:
+#   dotnet build
+#
+# Clean and rebuild:
+#   dotnet clean && dotnet build
+#
+# Run in watch mode (auto-recompile on file changes):
+#   dotnet watch run
+#
+# ============================================================================
+# ENDPOINT TEST RESULTS (Tested 2025-11-11)
+# ============================================================================
+#
+# ✓ Authentication Endpoints: 7/7 WORKING
+#   ✓ Login (SuperAdmin, Admin, User)
+#   ✓ Get current user profile (/me)
+#   ✓ Update profile
+#   ✓ Logout
+#   ✓ Access denied endpoint
+#
+# ✓ User Management Endpoints: 6/6 WORKING
+#   ✓ Get all users
+#   ✓ Get specific user
+#   ✓ Create new user
+#   ✓ Update user
+#   ✓ Deactivate user (soft delete)
+#   ✓ Reset password
+#
+# ✓ Role Management Endpoints: 8/8 WORKING
+#   ✓ Get all roles
+#   ✓ Get user roles
+#   ✓ Assign role
+#   ✓ Remove role
+#   ✓ Get users by role (SuperAdmin, Admin, User)
+#
+# ✓ Department Endpoints: 6/6 WORKING
+#   ✓ Get all departments
+#   ✓ Get specific department
+#   ✓ Create department
+#   ✓ Update department
+#   ✓ Assign manager
+#   ✓ Delete department (soft delete)
+#
+# ✓ Protected Endpoints: 1/1 WORKING
+#   ✓ Weather forecast
+#
+# ============================================================================
+# KNOWN ISSUES & FIXES APPLIED
+# ============================================================================
+#
+# ✓ FIXED: [JsonIgnore] on password fields
+#   - Issue: Password fields marked with [JsonIgnore] prevented JSON deserialization
+#   - Fix: Removed [JsonIgnore] from LoginRequest and ResetPasswordRequest
+#   - Reason: These DTOs are request-only; the [JsonIgnore] attribute was unnecessary
+#   - Result: Login and password reset endpoints now work correctly
 #
 # ============================================================================

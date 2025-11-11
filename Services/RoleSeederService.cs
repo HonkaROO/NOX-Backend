@@ -12,13 +12,16 @@ public class RoleSeederService
 {
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AppDbContext _context;
 
     public RoleSeederService(
         RoleManager<IdentityRole> roleManager,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        AppDbContext context)
     {
         _roleManager = roleManager;
         _userManager = userManager;
+        _context = context;
     }
 
     /// <summary>
@@ -46,6 +49,24 @@ public class RoleSeederService
         // Create default SuperAdmin user if no users exist yet
         if (await _userManager.Users.CountAsync() == 0)
         {
+            // Ensure "System Administration" department exists
+            var systemAdminDepartment = await _context.Departments
+                .FirstOrDefaultAsync(d => d.Name == "System Administration");
+
+            if (systemAdminDepartment == null)
+            {
+                systemAdminDepartment = new Department
+                {
+                    Name = "System Administration",
+                    Description = "System administrators and technical staff",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Departments.Add(systemAdminDepartment);
+                await _context.SaveChangesAsync();
+            }
+
             var superAdmin = new ApplicationUser
             {
                 UserName = "superadmin@nox.local",
@@ -53,7 +74,7 @@ public class RoleSeederService
                 EmailConfirmed = true,
                 FirstName = "Super",
                 LastName = "Administrator",
-                Department = "System Administration",
+                DepartmentId = systemAdminDepartment.Id,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -72,6 +93,11 @@ public class RoleSeederService
                 throw new InvalidOperationException(
                     $"Failed to assign SuperAdmin role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
             }
+
+            // Set the SuperAdmin as manager of the System Administration department
+            systemAdminDepartment.ManagerId = superAdmin.Id;
+            _context.Departments.Update(systemAdminDepartment);
+            await _context.SaveChangesAsync();
         }
     }
 }
