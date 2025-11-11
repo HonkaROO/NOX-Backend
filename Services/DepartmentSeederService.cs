@@ -41,36 +41,29 @@ public class DepartmentSeederService
             {
                 new Department
                 {
-                    Name = "Unassigned",
-                    Description = "Default department for users without a specific assignment",
+                    Name = "Advanced Analytics Digital Transformation",
+                    Description = "Advanced Analytics Digital Transformation department",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 },
                 new Department
                 {
-                    Name = "Engineering",
-                    Description = "Software development and engineering team",
+                    Name = "Enterprise Resource Planning",
+                    Description = "Enterprise Resource Planning department",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 },
                 new Department
                 {
-                    Name = "Human Resources",
-                    Description = "HR and personnel management",
+                    Name = "Manufacturing Communication Frame",
+                    Description = "Manufacturing Communication Frame department",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 },
                 new Department
                 {
-                    Name = "Sales",
-                    Description = "Sales and business development",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                },
-                new Department
-                {
-                    Name = "Support",
-                    Description = "Customer support and success",
+                    Name = "Human Resource Companion",
+                    Description = "Human Resource Companion department",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 }
