@@ -44,11 +44,20 @@ var app = builder.Build();
 // Seed roles, departments, and default SuperAdmin user
 using (var scope = app.Services.CreateScope())
 {
-    var departmentSeeder = scope.ServiceProvider.GetRequiredService<DepartmentSeederService>();
-    await departmentSeeder.SeedAsync();
+    try
+    {
+        var departmentSeeder = scope.ServiceProvider.GetRequiredService<DepartmentSeederService>();
+        await departmentSeeder.SeedAsync();
 
-    var roleSeeder = scope.ServiceProvider.GetRequiredService<RoleSeederService>();
-    await roleSeeder.SeedAsync();
+        var roleSeeder = scope.ServiceProvider.GetRequiredService<RoleSeederService>();
+        await roleSeeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database");
+        throw;
+    }
 }
 
 // Configure the HTTP request pipeline.

@@ -10,12 +10,14 @@ namespace NOX_Backend.Controllers;
 /// API controller for user authentication: login, logout, and profile management.
 /// Uses cookie-based authentication via ASP.NET Core Identity.
 ///
-/// Endpoints:
-/// - POST /login: Public, no authorization required. Authenticates user and returns profile.
-/// - POST /logout: [Authorize] required. Clears authentication cookie.
-/// - GET /me: [Authorize] required. Returns current authenticated user's profile.
-/// - PUT /me: [Authorize] required. Updates current user's profile information.
+/// Public Endpoints (no authorization required):
+/// - POST /login: Authenticates user with email/password; creates authentication cookie.
 /// - GET /access-denied: Returns 403 Forbidden for access denied scenarios.
+///
+/// Protected Endpoints ([Authorize] required):
+/// - POST /logout: Clears authentication cookie and logs user out.
+/// - GET /me: Returns current authenticated user's profile.
+/// - PUT /me: Updates current user's profile information (FirstName, LastName, Phone, Address).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
