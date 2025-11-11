@@ -32,7 +32,10 @@ builder.Services.AddScoped<RoleSeederService>();
 builder.Services.AddScoped<DepartmentSeederService>();
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApiDocument();
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.Title = "NOX Main Backend";
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
