@@ -16,15 +16,18 @@ public class UserManagementController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly AppDbContext _context;
     private readonly ILogger<UserManagementController> _logger;
 
     public UserManagementController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
+        AppDbContext context,
         ILogger<UserManagementController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _context = context;
         _logger = logger;
     }
 
@@ -59,6 +62,18 @@ public class UserManagementController : ControllerBase
         try
         {
             var users = await _userManager.Users.ToListAsync();
+            var userIds = users.Select(u => u.Id).ToList();
+
+            // Load all user-role mappings in a single query to avoid N+1
+            var rolesDictionary = await _context.UserRoles
+                .Where(ur => userIds.Contains(ur.UserId))
+                .Join(_context.Roles,
+                    ur => ur.RoleId,
+                    r => r.Id,
+                    (ur, r) => new { ur.UserId, RoleName = r.Name })
+                .GroupBy(x => x.UserId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.RoleName ?? string.Empty).ToList());
+
             var userDtos = new List<UserDto>();
 
             foreach (var user in users)
@@ -67,7 +82,7 @@ public class UserManagementController : ControllerBase
                 if (!await IsUserManageableByCurrentAdminAsync(user))
                     continue;
 
-                var roles = await _userManager.GetRolesAsync(user);
+                var roles = rolesDictionary.ContainsKey(user.Id) ? rolesDictionary[user.Id] : new List<string>();
                 userDtos.Add(MapToUserDto(user, roles));
             }
 
@@ -134,11 +149,17 @@ public class UserManagementController : ControllerBase
                 return Forbid();
             }
 
-            // Check if user already exists
-            var existingUser = await _userManager.FindByEmailAsync(request.Email);
-            if (existingUser != null)
+            // Check if user already exists (by email or username)
+            var existingUserByEmail = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUserByEmail != null)
             {
                 return BadRequest(new { message = "User with this email already exists" });
+            }
+
+            var existingUserByName = await _userManager.FindByNameAsync(request.UserName);
+            if (existingUserByName != null)
+            {
+                return BadRequest(new { message = "User with this username already exists" });
             }
 
             // Create new user
@@ -163,7 +184,20 @@ public class UserManagementController : ControllerBase
 
             // Assign role - default to "User" if not specified or if Admin creating
             var roleToAssign = string.IsNullOrEmpty(request.Role) ? "User" : request.Role;
-            await _userManager.AddToRoleAsync(user, roleToAssign);
+
+            // Validate that the role exists before assigning
+            var roleExists = await _roleManager.RoleExistsAsync(roleToAssign);
+            if (!roleExists)
+            {
+                return BadRequest(new { message = $"Role '{roleToAssign}' does not exist" });
+            }
+
+            var roleAssignResult = await _userManager.AddToRoleAsync(user, roleToAssign);
+            if (!roleAssignResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleAssignResult.Errors.Select(e => e.Description));
+                return BadRequest(new { message = "Failed to assign role", errors });
+            }
 
             var roles = await _userManager.GetRolesAsync(user);
             _logger.LogInformation("User {UserId} created with role {Role}", user.Id, roleToAssign);
@@ -252,7 +286,8 @@ public class UserManagementController : ControllerBase
             }
 
             // Don't allow deactivation of the account making the request
-            if (user.Id == User.FindFirst("sub")?.Value)
+            var currentUserId = _userManager.GetUserId(User);
+            if (user.Id == currentUserId)
             {
                 return BadRequest(new { message = "You cannot deactivate your own account" });
             }

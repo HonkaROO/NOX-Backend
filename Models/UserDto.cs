@@ -1,5 +1,8 @@
 namespace NOX_Backend.Models;
 
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// Data Transfer Object for user information in API responses.
 /// </summary>
@@ -23,12 +26,29 @@ public class UserDto
 /// </summary>
 public class CreateUserRequest
 {
+    [Required]
+    [StringLength(100)]
     public string UserName { get; set; } = null!;
+
+    [Required]
+    [EmailAddress]
     public string Email { get; set; } = null!;
+
+    [Required]
+    [StringLength(100, MinimumLength = 8)]
+    [DataType(DataType.Password)]
     public string Password { get; set; } = null!;
+
+    [StringLength(100)]
     public string? FirstName { get; set; }
+
+    [StringLength(100)]
     public string? LastName { get; set; }
+
+    [StringLength(100)]
     public string? Department { get; set; }
+
+    [StringLength(50)]
     public string? Role { get; set; }
 }
 
@@ -48,7 +68,16 @@ public class UpdateUserRequest
 /// </summary>
 public class ResetPasswordRequest
 {
+    [Required]
+    [StringLength(100, MinimumLength = 8)]
+    [DataType(DataType.Password)]
+    [JsonIgnore]
     public string NewPassword { get; set; } = null!;
+
+    [Required]
+    public string ResetToken { get; set; } = null!;
+
+    public string? UserId { get; set; }
 }
 
 /// <summary>
@@ -64,7 +93,13 @@ public class AssignRoleRequest
 /// </summary>
 public class LoginRequest
 {
+    [Required]
+    [EmailAddress]
     public string Email { get; set; } = null!;
+
+    [Required]
+    [DataType(DataType.Password)]
+    [JsonIgnore]
     public string Password { get; set; } = null!;
 }
 
