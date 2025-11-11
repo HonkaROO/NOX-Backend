@@ -11,12 +11,16 @@ namespace NOX_Backend.Services;
 /// </summary>
 public class ApplicationUserClaimsPrincipalFactory : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>
 {
+    private readonly AppDbContext _context;
+
     public ApplicationUserClaimsPrincipalFactory(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        IOptions<IdentityOptions> optionsAccessor)
+        IOptions<IdentityOptions> optionsAccessor,
+        AppDbContext context)
         : base(userManager, roleManager, optionsAccessor)
     {
+        _context = context;
     }
 
     /// <summary>
@@ -35,9 +39,14 @@ public class ApplicationUserClaimsPrincipalFactory : UserClaimsPrincipalFactory<
                 identity.AddClaim(new Claim(ClaimTypes.Role, role));
             }
 
+            // Get department name for claim
+            var department = await _context.Departments.FindAsync(user.DepartmentId);
+            var departmentName = department?.Name ?? "";
+
             // Add custom user claims
             identity.AddClaim(new Claim("FullName", user.GetFullName()));
-            identity.AddClaim(new Claim("Department", user.Department ?? ""));
+            identity.AddClaim(new Claim("DepartmentId", user.DepartmentId.ToString()));
+            identity.AddClaim(new Claim("DepartmentName", departmentName));
             identity.AddClaim(new Claim("IsActive", user.IsActive.ToString()));
 
             // Add user ID as "sub" claim if not already present

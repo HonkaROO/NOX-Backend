@@ -13,7 +13,8 @@ public class UserDto
     public string Email { get; set; } = null!;
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string? Department { get; set; }
+    public int DepartmentId { get; set; }
+    public string? DepartmentName { get; set; }
     public bool IsActive { get; set; }
     public bool EmailConfirmed { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -45,8 +46,8 @@ public class CreateUserRequest
     [StringLength(100)]
     public string? LastName { get; set; }
 
-    [StringLength(100)]
-    public string? Department { get; set; }
+    [Required(ErrorMessage = "Department ID is required.")]
+    public int DepartmentId { get; set; }
 
     [StringLength(50)]
     public string? Role { get; set; }
@@ -59,7 +60,7 @@ public class UpdateUserRequest
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string? Department { get; set; }
+    public int? DepartmentId { get; set; }
     public bool? IsActive { get; set; }
 }
 
@@ -71,7 +72,6 @@ public class ResetPasswordRequest
     [Required]
     [StringLength(100, MinimumLength = 8)]
     [DataType(DataType.Password)]
-    [JsonIgnore]
     public string NewPassword { get; set; } = null!;
 
     [Required]
@@ -99,7 +99,6 @@ public class LoginRequest
 
     [Required]
     [DataType(DataType.Password)]
-    [JsonIgnore]
     public string Password { get; set; } = null!;
 }
 
@@ -110,5 +109,4 @@ public class UpdateProfileRequest
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string? Department { get; set; }
 }

@@ -29,6 +29,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddScoped<RoleSeederService>();
+builder.Services.AddScoped<DepartmentSeederService>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument();
@@ -37,9 +38,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Seed roles and default SuperAdmin user
+// Seed roles, departments, and default SuperAdmin user
 using (var scope = app.Services.CreateScope())
 {
+    var departmentSeeder = scope.ServiceProvider.GetRequiredService<DepartmentSeederService>();
+    await departmentSeeder.SeedAsync();
+
     var roleSeeder = scope.ServiceProvider.GetRequiredService<RoleSeederService>();
     await roleSeeder.SeedAsync();
 }

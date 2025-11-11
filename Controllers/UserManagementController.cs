@@ -83,7 +83,7 @@ public class UserManagementController : ControllerBase
                     continue;
 
                 var roles = rolesDictionary.ContainsKey(user.Id) ? rolesDictionary[user.Id] : new List<string>();
-                userDtos.Add(MapToUserDto(user, roles));
+                userDtos.Add(await MapToUserDtoAsync(user, roles));
             }
 
             return Ok(userDtos);
@@ -119,7 +119,7 @@ public class UserManagementController : ControllerBase
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return Ok(MapToUserDto(user, roles));
+            return Ok(await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -162,6 +162,13 @@ public class UserManagementController : ControllerBase
                 return BadRequest(new { message = "User with this username already exists" });
             }
 
+            // Validate that the department exists
+            var department = await _context.Departments.FindAsync(request.DepartmentId);
+            if (department == null)
+            {
+                return BadRequest(new { message = "Department not found" });
+            }
+
             // Create new user
             var user = new ApplicationUser
             {
@@ -170,7 +177,7 @@ public class UserManagementController : ControllerBase
                 EmailConfirmed = true,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                Department = request.Department,
+                DepartmentId = request.DepartmentId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -201,7 +208,7 @@ public class UserManagementController : ControllerBase
 
             var roles = await _userManager.GetRolesAsync(user);
             _logger.LogInformation("User {UserId} created with role {Role}", user.Id, roleToAssign);
-            return CreatedAtAction(nameof(GetUserById), new { userId = user.Id }, MapToUserDto(user, roles));
+            return CreatedAtAction(nameof(GetUserById), new { userId = user.Id }, await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -238,8 +245,16 @@ public class UserManagementController : ControllerBase
                 user.FirstName = request.FirstName;
             if (!string.IsNullOrEmpty(request.LastName))
                 user.LastName = request.LastName;
-            if (!string.IsNullOrEmpty(request.Department))
-                user.Department = request.Department;
+            if (request.DepartmentId.HasValue)
+            {
+                // Validate that the department exists
+                var department = await _context.Departments.FindAsync(request.DepartmentId.Value);
+                if (department == null)
+                {
+                    return BadRequest(new { message = "Department not found" });
+                }
+                user.DepartmentId = request.DepartmentId.Value;
+            }
             if (request.IsActive.HasValue)
                 user.IsActive = request.IsActive.Value;
 
@@ -254,7 +269,7 @@ public class UserManagementController : ControllerBase
 
             var roles = await _userManager.GetRolesAsync(user);
             _logger.LogInformation("User {UserId} updated", userId);
-            return Ok(MapToUserDto(user, roles));
+            return Ok(await MapToUserDtoAsync(user, roles));
         }
         catch (Exception ex)
         {
@@ -364,8 +379,9 @@ public class UserManagementController : ControllerBase
     /// <summary>
     /// Helper method to map ApplicationUser to UserDto.
     /// </summary>
-    private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
+    private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user, IList<string> roles)
     {
+        var department = await _context.Departments.FindAsync(user.DepartmentId);
         return new UserDto
         {
             Id = user.Id,
@@ -373,7 +389,8 @@ public class UserManagementController : ControllerBase
             Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Department = user.Department,
+            DepartmentId = user.DepartmentId,
+            DepartmentName = department?.Name,
             IsActive = user.IsActive,
             EmailConfirmed = user.EmailConfirmed,
             CreatedAt = user.CreatedAt,
