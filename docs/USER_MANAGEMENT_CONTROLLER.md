@@ -77,7 +77,37 @@ Retrieves a list of all users accessible to the current administrator. SuperAdmi
 
 ---
 
-### 2. Get User by ID
+### 2. Get Dashboard Statistics
+**GET** `/api/usermanagement/dashboard/statistics`
+
+Retrieves aggregate statistics including total employee count and total departments count.
+
+**Authentication Required:** Yes - `[Authorize(Roles = "SuperAdmin, Admin")]`
+
+**Query Parameters:** None
+
+**Response (200 OK):**
+```json
+{
+  "totalEmployees": 25,
+  "totalDepartments": 5
+}
+```
+
+**Status Codes:**
+- `200 OK` - Statistics retrieved successfully
+- `401 Unauthorized` - Not authenticated
+- `403 Forbidden` - User lacks required role (SuperAdmin or Admin)
+- `500 Internal Server Error` - Server error
+
+**Implementation Notes:**
+- Returns total count of all users (employees) in the system
+- Returns total count of all departments
+- No filtering applied; SuperAdmin and Admin see the same statistics
+
+---
+
+### 3. Get User by ID
 **GET** `/api/usermanagement/{userId}`
 
 Retrieves a specific user's information by their ID. Admin can only retrieve User-role accounts.
@@ -142,6 +172,12 @@ Creates a new user account with specified credentials and role. SuperAdmin can c
 }
 ```
 
+**Required Fields:**
+- `userName` - Username (max 100 characters)
+- `email` - Valid email address
+- `password` - Password (minimum 8 characters)
+- `departmentId` - Valid department ID
+
 **Response (201 Created):**
 ```json
 {
@@ -193,12 +229,19 @@ Access denied (Admin cannot create non-User roles)
 **Validation Rules:**
 - Email must be unique (cannot duplicate existing email)
 - Username must be unique
-- Password must meet ASP.NET Core Identity password requirements:
-  - Minimum 6 characters
-  - Must contain uppercase letter
-  - Must contain lowercase letter
-  - Must contain digit
-  - Must contain special character
+- Password must meet requirements (two-level validation):
+  - API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
+  - UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
+    - Must contain uppercase letter
+    - Must contain lowercase letter
+    - Must contain digit
+    - Must contain non-alphanumeric character (special character)
+  - **Effective minimum: 8 characters with complexity requirements**
+- Phone must be a valid phone number format (via `[Phone]` attribute)
+- FirstName max 100 characters
+- LastName max 100 characters
+- Address max 255 characters
+- EmployeeId max 50 characters
 - Department must exist in database
 - Role must exist (defaults to "User" if not specified)
 - Admin can only assign "User" role to new accounts
@@ -336,6 +379,9 @@ Resets a user's password to a new value. Admin can only reset passwords for User
 }
 ```
 
+**Request Requirements:**
+- `newPassword` - New password (minimum 8 characters, required)
+
 **Response (200 OK):**
 ```json
 {
@@ -360,11 +406,13 @@ Resets a user's password to a new value. Admin can only reset passwords for User
 - `500 Internal Server Error` - Server error
 
 **Password Validation Rules:**
-- Minimum 6 characters
-- Must contain uppercase letter
-- Must contain lowercase letter
-- Must contain digit
-- Must contain special character
+- API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
+- UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
+  - Must contain uppercase letter
+  - Must contain lowercase letter
+  - Must contain digit
+  - Must contain non-alphanumeric character (special character)
+- **Effective requirement: 8 characters minimum with complexity (uppercase, lowercase, digit, special character)**
 
 **Implementation Notes:**
 - Removes old password first
@@ -413,9 +461,19 @@ public class UpdateUserRequest
 ```csharp
 public class ResetPasswordRequest
 {
-    public required string NewPassword { get; set; }
+    [Required]
+    [StringLength(100, MinimumLength = 8)]
+    [DataType(DataType.Password)]
+    public string NewPassword { get; set; } = null!;
+
+    [Required]
+    public string ResetToken { get; set; } = null!;
+
+    public string? UserId { get; set; }
 }
 ```
+
+**Note:** The `ResetToken` and `UserId` fields are included in the model definition but the controller's `ResetPassword` endpoint does not require them for admin-initiated resets—only the `NewPassword` is used for the admin reset password operation. These fields may be used in other password reset flows.
 
 ### UserDto (Response)
 ```csharp
@@ -436,7 +494,16 @@ public class UserDto
     public bool EmailConfirmed { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public IList<string> Roles { get; set; }
+    public IList<string>? Roles { get; set; }
+}
+```
+
+### DashboardStatisticsDto (Response)
+```csharp
+public class DashboardStatisticsDto
+{
+    public int TotalEmployees { get; set; }
+    public int TotalDepartments { get; set; }
 }
 ```
 
@@ -447,6 +514,7 @@ public class UserDto
 | Endpoint | SuperAdmin | Admin | User | Anonymous |
 |----------|:----------:|:-----:|:----:|:---------:|
 | GET all users | ✓ (all users) | ✓ (User-role only) | ✗ | ✗ |
+| GET dashboard/statistics | ✓ | ✓ | ✗ | ✗ |
 | GET user by ID | ✓ (all users) | ✓ (User-role only) | ✗ | ✗ |
 | POST (create) | ✓ (any role) | ✓ (User-role only) | ✗ | ✗ |
 | PUT (update) | ✓ (all users) | ✓ (User-role only) | ✗ | ✗ |
@@ -457,7 +525,23 @@ public class UserDto
 
 ## Usage Examples
 
-### Example 1: Create a New User
+### Example 1: Get Dashboard Statistics
+```bash
+curl -X GET http://localhost:5164/api/usermanagement/dashboard/statistics \
+  -b cookies.txt
+```
+
+**Response:**
+```json
+{
+  "totalEmployees": 25,
+  "totalDepartments": 5
+}
+```
+
+---
+
+### Example 2: Create a New User
 ```bash
 curl -X POST http://localhost:5164/api/usermanagement \
   -H "Content-Type: application/json" \
