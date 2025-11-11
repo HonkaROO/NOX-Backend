@@ -30,6 +30,10 @@ Retrieves a list of all users accessible to the current administrator. SuperAdmi
     "email": "john.doe@example.com",
     "firstName": "John",
     "lastName": "Doe",
+    "phone": "+1-555-0123",
+    "address": "123 Main St, Tech City, TC 12345",
+    "startDate": "2025-06-01T00:00:00Z",
+    "employeeId": "NPAX-2025-002",
     "departmentId": 2,
     "departmentName": "Engineering",
     "isActive": true,
@@ -44,6 +48,10 @@ Retrieves a list of all users accessible to the current administrator. SuperAdmi
     "email": "jane.smith@example.com",
     "firstName": "Jane",
     "lastName": "Smith",
+    "phone": "+1-555-0456",
+    "address": "456 Oak Ave, Tech City, TC 54321",
+    "startDate": "2025-07-15T00:00:00Z",
+    "employeeId": "NPAX-2025-003",
     "departmentId": 3,
     "departmentName": "Sales",
     "isActive": true,
@@ -87,6 +95,10 @@ Retrieves a specific user's information by their ID. Admin can only retrieve Use
   "email": "john.doe@example.com",
   "firstName": "John",
   "lastName": "Doe",
+  "phone": "+1-555-0123",
+  "address": "123 Main St, Tech City, TC 12345",
+  "startDate": "2025-06-01T00:00:00Z",
+  "employeeId": "NPAX-2025-002",
   "departmentId": 2,
   "departmentName": "Engineering",
   "isActive": true,
@@ -121,6 +133,10 @@ Creates a new user account with specified credentials and role. SuperAdmin can c
   "password": "SecurePassword123!",
   "firstName": "John",
   "lastName": "Doe",
+  "phone": "+1-555-0123",
+  "address": "123 Main St, Tech City, TC 12345",
+  "startDate": "2025-06-01T00:00:00Z",
+  "employeeId": "NPAX-2025-002",
   "departmentId": 2,
   "role": "User"
 }
@@ -134,6 +150,10 @@ Creates a new user account with specified credentials and role. SuperAdmin can c
   "email": "john.doe@example.com",
   "firstName": "John",
   "lastName": "Doe",
+  "phone": "+1-555-0123",
+  "address": "123 Main St, Tech City, TC 12345",
+  "startDate": "2025-06-01T00:00:00Z",
+  "employeeId": "NPAX-2025-002",
   "departmentId": 2,
   "departmentName": "Engineering",
   "isActive": true,
@@ -206,6 +226,10 @@ Updates user information including name, department, and active status. Admin ca
 {
   "firstName": "John",
   "lastName": "Doe",
+  "phone": "+1-555-9999",
+  "address": "999 New St, Tech City, TC 99999",
+  "startDate": "2025-06-01T00:00:00Z",
+  "employeeId": "NPAX-2025-002",
   "departmentId": 3,
   "isActive": true
 }
@@ -219,6 +243,10 @@ Updates user information including name, department, and active status. Admin ca
   "email": "john.doe@example.com",
   "firstName": "John",
   "lastName": "Doe",
+  "phone": "+1-555-9999",
+  "address": "999 New St, Tech City, TC 99999",
+  "startDate": "2025-06-01T00:00:00Z",
+  "employeeId": "NPAX-2025-002",
   "departmentId": 3,
   "departmentName": "Sales",
   "isActive": true,
@@ -242,11 +270,15 @@ Updates user information including name, department, and active status. Admin ca
 - Empty strings do not update fields
 - Department must exist if specified
 - IsActive can be `true` or `false`
+- Phone must be a valid phone number format (optional validation via `[Phone]` attribute)
+- Address max length: 255 characters
+- EmployeeId max length: 50 characters
 
 **Implementation Notes:**
 - Updates `UpdatedAt` timestamp to current UTC time
 - Does not change password (use reset-password endpoint)
 - Does not change email or username
+- StartDate and EmployeeId are employee profile fields (admin-only fields)
 
 ---
 
@@ -353,6 +385,10 @@ public class CreateUserRequest
     public required string Password { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public DateTime? StartDate { get; set; }
+    public string? EmployeeId { get; set; }
     public required int DepartmentId { get; set; }
     public string? Role { get; set; } = "User";
 }
@@ -364,6 +400,10 @@ public class UpdateUserRequest
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public DateTime? StartDate { get; set; }
+    public string? EmployeeId { get; set; }
     public int? DepartmentId { get; set; }
     public bool? IsActive { get; set; }
 }
@@ -384,8 +424,12 @@ public class UserDto
     public string Id { get; set; }
     public string UserName { get; set; }
     public string Email { get; set; }
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public DateTime? StartDate { get; set; }
+    public string? EmployeeId { get; set; }
     public int DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
     public bool IsActive { get; set; }
@@ -424,6 +468,10 @@ curl -X POST http://localhost:5164/api/usermanagement \
     "password": "SecurePassword123!",
     "firstName": "John",
     "lastName": "Doe",
+    "phone": "+1-555-0123",
+    "address": "123 Main St, Tech City, TC 12345",
+    "startDate": "2025-06-01T00:00:00Z",
+    "employeeId": "NPAX-2025-002",
     "departmentId": 2,
     "role": "User"
   }'
@@ -436,6 +484,8 @@ curl -X PUT http://localhost:5164/api/usermanagement/user-id-123 \
   -b cookies.txt \
   -d '{
     "firstName": "Jonathan",
+    "phone": "+1-555-9999",
+    "address": "999 New St, Tech City, TC 99999",
     "departmentId": 3
   }'
 ```

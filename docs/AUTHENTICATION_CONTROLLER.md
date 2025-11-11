@@ -31,6 +31,10 @@ Authenticates a user with email and password credentials. Upon successful authen
   "email": "superadmin@nox.local",
   "firstName": "Super",
   "lastName": "Administrator",
+  "phone": "+1-555-0123",
+  "address": "123 Admin Ave, Tech City, TC 12345",
+  "startDate": "2025-01-01T00:00:00Z",
+  "employeeId": "NPAX-2025-001",
   "departmentId": 1,
   "departmentName": "System Administration",
   "isActive": true,
@@ -83,6 +87,10 @@ Cookie: .AspNetCore.Identity.Application=<cookie-value>
   "email": "superadmin@nox.local",
   "firstName": "Super",
   "lastName": "Administrator",
+  "phone": "+1-555-0123",
+  "address": "123 Admin Ave, Tech City, TC 12345",
+  "startDate": "2025-01-01T00:00:00Z",
+  "employeeId": "NPAX-2025-001",
   "departmentId": 1,
   "departmentName": "System Administration",
   "isActive": true,
@@ -104,7 +112,7 @@ Cookie: .AspNetCore.Identity.Application=<cookie-value>
 ### 3. Update Current User Profile
 **PUT** `/api/authentication/me`
 
-Updates the profile information of the currently authenticated user. Users can only update their own profile (FirstName and LastName).
+Updates the profile information of the currently authenticated user. Users can only update their own profile (FirstName, LastName, Phone, and Address).
 
 **Authentication Required:** Yes (`[Authorize]`)
 
@@ -118,7 +126,9 @@ Content-Type: application/json
 ```json
 {
   "firstName": "Jane",
-  "lastName": "Smith"
+  "lastName": "Smith",
+  "phone": "+1-555-0456",
+  "address": "456 User Lane, Tech City, TC 54321"
 }
 ```
 
@@ -130,6 +140,10 @@ Content-Type: application/json
   "email": "jane.smith@nox.local",
   "firstName": "Jane",
   "lastName": "Smith",
+  "phone": "+1-555-0456",
+  "address": "456 User Lane, Tech City, TC 54321",
+  "startDate": null,
+  "employeeId": null,
   "departmentId": 1,
   "departmentName": "Engineering",
   "isActive": true,
@@ -156,9 +170,11 @@ Content-Type: application/json
 - `500 Internal Server Error` - Server error
 
 **Validation Rules:**
-- FirstName and LastName are optional fields
+- FirstName, LastName, Phone, and Address are optional fields
 - Only provided fields will be updated
 - Empty strings will not update a field
+- Phone must be a valid phone number format (optional validation via `[Phone]` attribute)
+- Address max length: 255 characters
 
 ---
 
@@ -254,6 +270,10 @@ The response DTO includes the following fields:
 | `email` | string | User's email address |
 | `firstName` | string | User's first name |
 | `lastName` | string | User's last name |
+| `phone` | string? | User's phone number (optional) |
+| `address` | string? | User's physical address (optional) |
+| `startDate` | DateTime? | User's employment start date (optional) |
+| `employeeId` | string? | Unique employee ID (e.g., "NPAX-2024-001", optional) |
 | `departmentId` | int | Department ID user belongs to |
 | `departmentName` | string | Department name (optional, null if department not found) |
 | `isActive` | bool | Account active status |
