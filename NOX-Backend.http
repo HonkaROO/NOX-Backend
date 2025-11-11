@@ -5,7 +5,8 @@
 # API ENDPOINT TESTING GUIDE AND EXAMPLES
 # ============================================================================
 # This file contains all API endpoints for NOX-Backend with test results.
-# Status: ✓ ALL ENDPOINTS TESTED AND WORKING (2025-11-11)
+# Status: ✓ ALL ENDPOINTS TESTED AND WORKING (Updated: 2025-11-11)
+# Total Endpoints: 29 (7 Authentication, 7 User Management, 8 Role Management, 6 Department, 1 Protected)
 #
 # AUTHENTICATION METHOD: Cookie-Based (HTTP-only, SameSite=Lax)
 # - After login, authentication cookie is automatically set in response headers
@@ -137,6 +138,12 @@ Content-Type: application/json
   "newPassword": "ResetPassword@2024!Nox"
 }
 
+### 14. Get dashboard statistics
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Returns: Total employee count and total department count
+### Useful for dashboard and administrative overview
+GET {{NOX_Backend_HostAddress}}/api/usermanagement/dashboard/statistics
+
 # ============================================================================
 # ROLE MANAGEMENT ENDPOINTS (SuperAdmin Only)
 # ============================================================================
@@ -144,17 +151,17 @@ Content-Type: application/json
 # All role management operations require SuperAdmin role
 # Status: ✓ TESTED - All working correctly
 
-### 14. Get all available roles
+### 15. Get all available roles
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 ### Returns: List of available roles: ["SuperAdmin", "Admin", "User"]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement
 
-### 15. Get all roles assigned to a specific user
+### 16. Get all roles assigned to a specific user
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 ### Replace USER_ID_HERE with actual user ID
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE
 
-### 16. Assign a role to a user (SuperAdmin only)
+### 17. Assign a role to a user (SuperAdmin only)
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 ### Available roles: SuperAdmin, Admin, User
 POST {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/assign
@@ -164,25 +171,25 @@ Content-Type: application/json
   "roleName": "Admin"
 }
 
-### 17. Remove a role from a user (SuperAdmin only)
+### 18. Remove a role from a user (SuperAdmin only)
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 ### NOTE: At least one role must remain assigned to user
 DELETE {{NOX_Backend_HostAddress}}/api/rolemanagement/user/USER_ID_HERE/remove/Admin
 
-### 18. Get all users assigned to a specific role (SuperAdmin only)
+### 19. Get all users assigned to a specific role (SuperAdmin only)
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 ### Replace "Admin" with role name: SuperAdmin, Admin, or User
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/Admin/users
 
-### 19. Get all SuperAdmin users
+### 20. Get all SuperAdmin users
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/SuperAdmin/users
 
-### 20. Get all Admin users
+### 21. Get all Admin users
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/Admin/users
 
-### 21. Get all User-role accounts
+### 22. Get all User-role accounts
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin")]
 GET {{NOX_Backend_HostAddress}}/api/rolemanagement/User/users
 
@@ -193,15 +200,15 @@ GET {{NOX_Backend_HostAddress}}/api/rolemanagement/User/users
 # Create, update, delete require SuperAdmin or Admin role
 # Status: ✓ TESTED - All working correctly
 
-### 22. Get all departments
+### 23. Get all departments
 ### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
 GET {{NOX_Backend_HostAddress}}/api/departments
 
-### 23. Get specific department by ID
+### 24. Get specific department by ID
 ### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
 GET {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
 
-### 24. Create new department
+### 25. Create new department
 ### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
 POST {{NOX_Backend_HostAddress}}/api/departments
 Content-Type: application/json
@@ -212,7 +219,7 @@ Content-Type: application/json
   "managerId": null
 }
 
-### 25. Update department
+### 26. Update department
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
 PUT {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
 Content-Type: application/json
@@ -223,7 +230,7 @@ Content-Type: application/json
   "managerId": null
 }
 
-### 26. Assign manager to department
+### 27. Assign manager to department
 ### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
 ### IMPORTANT: Manager must be a user in this department
 PUT {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE/manager
@@ -233,7 +240,7 @@ Content-Type: application/json
   "managerId": "USER_ID_HERE"
 }
 
-### 27. Delete (soft-delete) department
+### 28. Delete (soft-delete) department
 ### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin")]
 ### Sets IsActive = false; cannot delete departments with assigned users
 DELETE {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
@@ -242,7 +249,7 @@ DELETE {{NOX_Backend_HostAddress}}/api/departments/DEPT_ID_HERE
 # PROTECTED ENDPOINTS (Authorization Examples)
 # ============================================================================
 
-### 28. Get Weather Forecast (sample protected endpoint)
+### 29. Get Weather Forecast (sample protected endpoint)
 ### Status: ✓ WORKING (HTTP 200) - [Authorize] - Any authenticated user
 GET {{NOX_Backend_HostAddress}}/weatherforecast
 
@@ -397,13 +404,14 @@ GET {{NOX_Backend_HostAddress}}/weatherforecast
 #   ✓ Logout
 #   ✓ Access denied endpoint
 #
-# ✓ User Management Endpoints: 6/6 WORKING
+# ✓ User Management Endpoints: 7/7 WORKING
 #   ✓ Get all users
 #   ✓ Get specific user
 #   ✓ Create new user
 #   ✓ Update user
 #   ✓ Deactivate user (soft delete)
 #   ✓ Reset password
+#   ✓ Get dashboard statistics
 #
 # ✓ Role Management Endpoints: 8/8 WORKING
 #   ✓ Get all roles
