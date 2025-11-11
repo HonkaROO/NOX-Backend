@@ -67,8 +67,6 @@ docker rm sqlserver
 
 ## Development
 
-See [CLAUDE.md](./CLAUDE.md) for detailed architecture information and development workflow.
-
 ### Common Commands
 
 - **Build:** `dotnet build`
@@ -82,12 +80,14 @@ See [CLAUDE.md](./CLAUDE.md) for detailed architecture information and developme
 Complete documentation for each API controller is available in the `/docs` folder:
 
 - **[Authentication Controller](./docs/AUTHENTICATION_CONTROLLER.md)** - User login, logout, and profile management
+
   - `POST /api/authentication/login` - Login with email/password
   - `GET /api/authentication/me` - Get current user profile
   - `PUT /api/authentication/me` - Update current user profile
   - `POST /api/authentication/logout` - Logout current user
 
 - **[User Management Controller](./docs/USER_MANAGEMENT_CONTROLLER.md)** - User account creation and administration
+
   - `GET /api/usermanagement` - Get all users (filtered by role)
   - `GET /api/usermanagement/{userId}` - Get specific user
   - `POST /api/usermanagement` - Create new user
@@ -96,6 +96,7 @@ Complete documentation for each API controller is available in the `/docs` folde
   - `POST /api/usermanagement/{userId}/reset-password` - Reset user password
 
 - **[Role Management Controller](./docs/ROLE_MANAGEMENT_CONTROLLER.md)** - Role and authorization management
+
   - `GET /api/rolemanagement` - Get all available roles
   - `GET /api/rolemanagement/user/{userId}` - Get user's roles
   - `POST /api/rolemanagement/user/{userId}/assign` - Assign role to user
