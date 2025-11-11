@@ -143,3 +143,12 @@ public class UpdateProfileRequest
     [StringLength(255)]
     public string? Address { get; set; }
 }
+
+/// <summary>
+/// Response DTO for dashboard statistics.
+/// </summary>
+public class DashboardStatisticsDto
+{
+    public int TotalEmployees { get; set; }
+    public int TotalDepartments { get; set; }
+}
