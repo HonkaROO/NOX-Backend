@@ -13,6 +13,10 @@ public class UserDto
     public string Email { get; set; } = null!;
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public DateTime? StartDate { get; set; }
+    public string? EmployeeId { get; set; }
     public int DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
     public bool IsActive { get; set; }
@@ -46,6 +50,17 @@ public class CreateUserRequest
     [StringLength(100)]
     public string? LastName { get; set; }
 
+    [Phone]
+    public string? Phone { get; set; }
+
+    [StringLength(255)]
+    public string? Address { get; set; }
+
+    public DateTime? StartDate { get; set; }
+
+    [StringLength(50)]
+    public string? EmployeeId { get; set; }
+
     [Required(ErrorMessage = "Department ID is required.")]
     public int DepartmentId { get; set; }
 
@@ -60,6 +75,18 @@ public class UpdateUserRequest
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
+
+    [Phone]
+    public string? Phone { get; set; }
+
+    [StringLength(255)]
+    public string? Address { get; set; }
+
+    public DateTime? StartDate { get; set; }
+
+    [StringLength(50)]
+    public string? EmployeeId { get; set; }
+
     public int? DepartmentId { get; set; }
     public bool? IsActive { get; set; }
 }
@@ -109,4 +136,10 @@ public class UpdateProfileRequest
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
+
+    [Phone]
+    public string? Phone { get; set; }
+
+    [StringLength(255)]
+    public string? Address { get; set; }
 }

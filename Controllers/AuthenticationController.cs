@@ -190,6 +190,10 @@ public class AuthenticationController : ControllerBase
                 user.FirstName = request.FirstName;
             if (!string.IsNullOrEmpty(request.LastName))
                 user.LastName = request.LastName;
+            if (!string.IsNullOrEmpty(request.Phone))
+                user.Phone = request.Phone;
+            if (!string.IsNullOrEmpty(request.Address))
+                user.Address = request.Address;
 
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -224,6 +228,10 @@ public class AuthenticationController : ControllerBase
             Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
+            Phone = user.Phone,
+            Address = user.Address,
+            StartDate = user.StartDate,
+            EmployeeId = user.EmployeeId,
             DepartmentId = user.DepartmentId,
             DepartmentName = department?.Name,
             IsActive = user.IsActive,

@@ -50,6 +50,26 @@ public class ApplicationUser : IdentityUser
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
+    /// User's phone number.
+    /// </summary>
+    public string? Phone { get; set; }
+
+    /// <summary>
+    /// User's physical address.
+    /// </summary>
+    public string? Address { get; set; }
+
+    /// <summary>
+    /// User's employment start date.
+    /// </summary>
+    public DateTime? StartDate { get; set; }
+
+    /// <summary>
+    /// Unique employee ID (e.g., "NPAX-2024-001").
+    /// </summary>
+    public string? EmployeeId { get; set; }
+
+    /// <summary>
     /// Gets the user's full name by combining first and last names.
     /// </summary>
     public string GetFullName() => $"{FirstName} {LastName}".Trim();
