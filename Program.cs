@@ -31,6 +31,25 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<RoleSeederService>();
 builder.Services.AddScoped<DepartmentSeederService>();
 
+// Configure CORS for development (React/Vite frontend)
+if (builder.Environment.IsDevelopment())
+{
+    var corsConfig = builder.Configuration.GetSection("Cors");
+    var allowedOrigins = corsConfig.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("DevelopmentCorsPolicy", policy =>
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    });
+}
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument(config =>
 {
@@ -69,6 +88,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Apply CORS policy for development
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("DevelopmentCorsPolicy");
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
