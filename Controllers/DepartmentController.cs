@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
+using NOX_Backend.Models.DTOs;
 
 namespace NOX_Backend.Controllers;
 

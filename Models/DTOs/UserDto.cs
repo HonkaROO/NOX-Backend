@@ -1,4 +1,4 @@
-namespace NOX_Backend.Models;
+namespace NOX_Backend.Models.DTOs;
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
