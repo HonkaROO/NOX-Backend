@@ -186,9 +186,9 @@ curl -X GET http://localhost:5164/api/authentication/me \
 
 ## API Documentation
 
-Complete endpoint documentation is available in the `/docs` folder. Here's a quick reference:
+Complete endpoint documentation is available in the `/Documentation` folder. Here's a quick reference:
 
-### [Authentication Controller](./docs/AUTHENTICATION_CONTROLLER.md)
+### [Authentication Controller](./Documentation/AUTHENTICATION_CONTROLLER.md)
 
 **Route:** `/api/authentication`
 
@@ -213,7 +213,7 @@ curl -X POST http://localhost:5164/api/authentication/login \
 
 ---
 
-### [User Management Controller](./docs/USER_MANAGEMENT_CONTROLLER.md)
+### [User Management Controller](./Documentation/USER_MANAGEMENT_CONTROLLER.md)
 
 **Route:** `/api/usermanagement`
 
@@ -255,7 +255,7 @@ curl -X POST http://localhost:5164/api/usermanagement \
 
 ---
 
-### [Role Management Controller](./docs/ROLE_MANAGEMENT_CONTROLLER.md)
+### [Role Management Controller](./Documentation/ROLE_MANAGEMENT_CONTROLLER.md)
 
 **Route:** `/api/rolemanagement`
 
@@ -286,7 +286,7 @@ curl -X POST http://localhost:5164/api/rolemanagement/user/user-id-123/assign \
 
 ---
 
-### [Department Controller](./docs/DEPARTMENT_CONTROLLER.md)
+### [Department Controller](./Documentation/DEPARTMENT_CONTROLLER.md)
 
 **Route:** `/api/departments`
 
@@ -320,6 +320,21 @@ curl -X POST http://localhost:5164/api/departments \
     "description": "Marketing and communications team"
   }'
 ```
+
+---
+
+### [CORS Setup Guide](./Documentation/CORS_SETUP.md)
+
+**Configuration:** CORS for React/Vite Frontend Development
+
+CORS (Cross-Origin Resource Sharing) configuration for enabling seamless integration with React and Vite development servers. Includes allowed origins, methods, headers, credentials handling, and troubleshooting for common CORS issues.
+
+**Key Features:**
+- Development-only CORS policy
+- Cookie-based authentication support
+- Allowed origins for Vite (port 5173/5174) and Create-React-App (port 3000/3001)
+- Preflight caching with 1-hour max age
+- Complete troubleshooting guide
 
 ---
 
@@ -640,12 +655,13 @@ Default SuperAdmin will be recreated on next app startup.
 
 ## Additional Resources
 
-For detailed endpoint documentation, see the `/docs` folder:
+For detailed endpoint documentation, see the `/Documentation` folder:
 
-- **[Authentication Controller Documentation](./docs/AUTHENTICATION_CONTROLLER.md)** - Complete auth endpoint reference
-- **[User Management Controller Documentation](./docs/USER_MANAGEMENT_CONTROLLER.md)** - User CRUD and admin endpoints
-- **[Role Management Controller Documentation](./docs/ROLE_MANAGEMENT_CONTROLLER.md)** - Role assignment and management
-- **[Department Controller Documentation](./docs/DEPARTMENT_CONTROLLER.md)** - Department management endpoints
+- **[Authentication Controller Documentation](./Documentation/AUTHENTICATION_CONTROLLER.md)** - Complete auth endpoint reference
+- **[User Management Controller Documentation](./Documentation/USER_MANAGEMENT_CONTROLLER.md)** - User CRUD and admin endpoints
+- **[Role Management Controller Documentation](./Documentation/ROLE_MANAGEMENT_CONTROLLER.md)** - Role assignment and management
+- **[Department Controller Documentation](./Documentation/DEPARTMENT_CONTROLLER.md)** - Department management endpoints
+- **[CORS Setup Guide](./Documentation/CORS_SETUP.md)** - CORS configuration for React/Vite frontend
 
 For development guidance, see [CLAUDE.md](./CLAUDE.md) (project architecture and setup).
 
@@ -661,7 +677,7 @@ NOX-Backend/
 ├── Data/                        # Database context (AppDbContext)
 ├── Migrations/                  # EF Core migrations
 ├── Properties/                  # Launch profiles (launchSettings.json)
-├── docs/                        # Detailed controller documentation
+├── Documentation/               # Detailed controller documentation
 ├── Program.cs                   # Dependency injection & middleware setup
 ├── appsettings.json             # Production configuration
 ├── appsettings.Development.json # Development configuration
