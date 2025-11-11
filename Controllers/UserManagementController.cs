@@ -129,6 +129,34 @@ public class UserManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Get dashboard statistics including total employees and departments.
+    /// SuperAdmin and Admin only.
+    /// </summary>
+    /// <returns>Dashboard statistics with employee and department counts</returns>
+    [HttpGet("dashboard/statistics")]
+    public async Task<ActionResult<DashboardStatisticsDto>> GetDashboardStatistics()
+    {
+        try
+        {
+            var totalEmployees = await _userManager.Users.CountAsync();
+            var totalDepartments = await _context.Departments.CountAsync();
+
+            var statistics = new DashboardStatisticsDto
+            {
+                TotalEmployees = totalEmployees,
+                TotalDepartments = totalDepartments
+            };
+
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving dashboard statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving dashboard statistics" });
+        }
+    }
+
+    /// <summary>
     /// Create a new user account. SuperAdmin can create any role. Admin can only create User role accounts.
     /// </summary>
     /// <param name="request">User creation request with credentials and details</param>
