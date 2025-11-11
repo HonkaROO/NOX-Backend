@@ -17,15 +17,18 @@ public class RoleManagementController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly AppDbContext _context;
     private readonly ILogger<RoleManagementController> _logger;
 
     public RoleManagementController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
+        AppDbContext context,
         ILogger<RoleManagementController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _context = context;
         _logger = logger;
     }
 
@@ -38,7 +41,10 @@ public class RoleManagementController : ControllerBase
     {
         try
         {
-            var roles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
+            var roles = await _roleManager.Roles
+                .Where(r => r.Name != null)
+                .Select(r => r.Name)
+                .ToListAsync();
             return Ok(roles);
         }
         catch (Exception ex)
@@ -155,7 +161,8 @@ public class RoleManagementController : ControllerBase
             }
 
             // Prevent SuperAdmin from removing the SuperAdmin role from themselves
-            if (roleName == "SuperAdmin" && user.Id == User.FindFirst("sub")?.Value)
+            var currentUserId = _userManager.GetUserId(User);
+            if (roleName == "SuperAdmin" && user.Id == currentUserId)
             {
                 return BadRequest(new { message = "You cannot remove the SuperAdmin role from your own account" });
             }
@@ -197,11 +204,22 @@ public class RoleManagementController : ControllerBase
 
             // Get all users in the role
             var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
-            var userDtos = new List<UserDto>();
+            var userIds = usersInRole.Select(u => u.Id).ToList();
 
+            // Load all user-role mappings in a single query to avoid N+1
+            var rolesDictionary = await _context.UserRoles
+                .Where(ur => userIds.Contains(ur.UserId))
+                .Join(_context.Roles,
+                    ur => ur.RoleId,
+                    r => r.Id,
+                    (ur, r) => new { ur.UserId, RoleName = r.Name })
+                .GroupBy(x => x.UserId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.RoleName ?? string.Empty).ToList());
+
+            var userDtos = new List<UserDto>();
             foreach (var user in usersInRole)
             {
-                var roles = await _userManager.GetRolesAsync(user);
+                var roles = rolesDictionary.ContainsKey(user.Id) ? rolesDictionary[user.Id] : new List<string>();
                 userDtos.Add(MapToUserDto(user, roles));
             }
 

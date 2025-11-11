@@ -7,9 +7,15 @@ using NOX_Backend.Models;
 namespace NOX_Backend.Controllers;
 
 /// <summary>
-/// API controller for user authentication: login, registration, and logout.
+/// API controller for user authentication: login, logout, and profile management.
 /// Uses cookie-based authentication via ASP.NET Core Identity.
-/// All endpoints are public (no authorization required) except for the update profile endpoint.
+///
+/// Endpoints:
+/// - POST /login: Public, no authorization required. Authenticates user and returns profile.
+/// - POST /logout: [Authorize] required. Clears authentication cookie.
+/// - GET /me: [Authorize] required. Returns current authenticated user's profile.
+/// - PUT /me: [Authorize] required. Updates current user's profile information.
+/// - GET /access-denied: Returns 403 Forbidden for access denied scenarios.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -51,18 +57,19 @@ public class AuthenticationController : ControllerBase
                 return Unauthorized(new { message = "Invalid email or password" });
             }
 
-            // Check if user is active
-            if (!user.IsActive)
-            {
-                return Unauthorized(new { message = "Your account has been deactivated" });
-            }
-
             // Try to sign in the user (UserName is guaranteed non-null as it's set to Email on creation)
             var result = await _signInManager.PasswordSignInAsync(
                 user.UserName!,
                 request.Password,
                 isPersistent: false,
-                lockoutOnFailure: false);
+                lockoutOnFailure: true);
+
+            // Check if user is active (after successful password validation)
+            if (result.Succeeded && !user.IsActive)
+            {
+                await _signInManager.SignOutAsync();
+                return Unauthorized(new { message = "Invalid email or password" });
+            }
 
             if (!result.Succeeded)
             {
@@ -112,7 +119,7 @@ public class AuthenticationController : ControllerBase
     [HttpGet("access-denied")]
     public IActionResult AccessDenied()
     {
-        return Forbid();
+        return StatusCode(StatusCodes.Status403Forbidden, new { message = "Access denied" });
     }
 
     /// <summary>
