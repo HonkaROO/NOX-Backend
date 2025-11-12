@@ -455,15 +455,10 @@ public class ResetPasswordRequest
     [StringLength(100, MinimumLength = 8)]
     [DataType(DataType.Password)]
     public string NewPassword { get; set; } = null!;
-
-    [Required]
-    public string ResetToken { get; set; } = null!;
-
-    public string? UserId { get; set; }
 }
 ```
 
-**Note:** The `ResetToken` and `UserId` fields are included in the model definition but the controller's `ResetPassword` endpoint does not require them for admin-initiated resets—only the `NewPassword` is used for the admin reset password operation. These fields may be used in other password reset flows.
+**Note:** This DTO is used for **admin-initiated password resets** only. SuperAdmin and Admin users can reset passwords for users they have permission to manage. Only the `NewPassword` field is required. No reset token validation is performed—the authorization is handled via role-based access control (SuperAdmin or Admin role required).
 
 ### UserDto (Response)
 ```csharp
