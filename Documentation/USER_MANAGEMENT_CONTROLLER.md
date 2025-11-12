@@ -229,14 +229,9 @@ Access denied (Admin cannot create non-User roles)
 **Validation Rules:**
 - Email must be unique (cannot duplicate existing email)
 - Username must be unique
-- Password must meet requirements (two-level validation):
-  - API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
-  - UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
-    - Must contain uppercase letter
-    - Must contain lowercase letter
-    - Must contain digit
-    - Must contain non-alphanumeric character (special character)
-  - **Effective minimum: 8 characters with complexity requirements**
+- Password must meet requirements:
+  - Minimum 8 characters
+  - Must include uppercase, lowercase, digit, and special character
 - Phone must be a valid phone number format (via `[Phone]` attribute)
 - FirstName max 100 characters
 - LastName max 100 characters
@@ -406,13 +401,8 @@ Resets a user's password to a new value. Admin can only reset passwords for User
 - `500 Internal Server Error` - Server error
 
 **Password Validation Rules:**
-- API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
-- UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
-  - Must contain uppercase letter
-  - Must contain lowercase letter
-  - Must contain digit
-  - Must contain non-alphanumeric character (special character)
-- **Effective requirement: 8 characters minimum with complexity (uppercase, lowercase, digit, special character)**
+- Minimum 8 characters
+- Must include uppercase, lowercase, digit, and special character
 
 **Implementation Notes:**
 - Removes old password first
@@ -465,15 +455,10 @@ public class ResetPasswordRequest
     [StringLength(100, MinimumLength = 8)]
     [DataType(DataType.Password)]
     public string NewPassword { get; set; } = null!;
-
-    [Required]
-    public string ResetToken { get; set; } = null!;
-
-    public string? UserId { get; set; }
 }
 ```
 
-**Note:** The `ResetToken` and `UserId` fields are included in the model definition but the controller's `ResetPassword` endpoint does not require them for admin-initiated resets—only the `NewPassword` is used for the admin reset password operation. These fields may be used in other password reset flows.
+**Note:** This DTO is used for **admin-initiated password resets** only. SuperAdmin and Admin users can reset passwords for users they have permission to manage. Only the `NewPassword` field is required. No reset token validation is performed—the authorization is handled via role-based access control (SuperAdmin or Admin role required).
 
 ### UserDto (Response)
 ```csharp

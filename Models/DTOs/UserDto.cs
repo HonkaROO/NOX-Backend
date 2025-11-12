@@ -1,4 +1,4 @@
-namespace NOX_Backend.Models;
+namespace NOX_Backend.Models.DTOs;
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
@@ -92,7 +92,8 @@ public class UpdateUserRequest
 }
 
 /// <summary>
-/// Request DTO for resetting a user's password.
+/// Request DTO for resetting a user's password (admin-initiated).
+/// SuperAdmin and Admin users can reset passwords for users they have permission to manage.
 /// </summary>
 public class ResetPasswordRequest
 {
@@ -100,11 +101,6 @@ public class ResetPasswordRequest
     [StringLength(100, MinimumLength = 8)]
     [DataType(DataType.Password)]
     public string NewPassword { get; set; } = null!;
-
-    [Required]
-    public string ResetToken { get; set; } = null!;
-
-    public string? UserId { get; set; }
 }
 
 /// <summary>

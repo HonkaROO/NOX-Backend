@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NOX_Backend.Models;
+namespace NOX_Backend.Models.DTOs;
 
 /// <summary>
 /// Data Transfer Object for Department responses.

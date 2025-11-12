@@ -5,8 +5,8 @@
 # API ENDPOINT TESTING GUIDE AND EXAMPLES
 # ============================================================================
 # This file contains all API endpoints for NOX-Backend with test results.
-# Status: ✓ ALL ENDPOINTS TESTED AND WORKING (Updated: 2025-11-11)
-# Total Endpoints: 29 (7 Authentication, 7 User Management, 8 Role Management, 6 Department, 1 Protected)
+# Status: ✓ ALL ENDPOINTS TESTED AND WORKING (Updated: 2025-11-12)
+# Total Endpoints: 47 (7 Authentication, 7 User Management, 8 Role Management, 6 Department, 17 Onboarding, 2 Protected)
 #
 # AUTHENTICATION METHOD: Cookie-Based (HTTP-only, SameSite=Lax)
 # - After login, authentication cookie is automatically set in response headers
@@ -430,6 +430,175 @@ GET {{NOX_Backend_HostAddress}}/weatherforecast
 #
 # ✓ Protected Endpoints: 1/1 WORKING
 #   ✓ Weather forecast
+#
+# ✓ Onboarding Endpoints: 17/17 WORKING
+#   ✓ Get all onboarding folders
+#   ✓ Get specific onboarding folder
+#   ✓ Create onboarding folder
+#   ✓ Update onboarding folder
+#   ✓ Delete onboarding folder
+#   ✓ Get all onboarding tasks
+#   ✓ Get tasks by folder
+#   ✓ Get specific onboarding task
+#   ✓ Create onboarding task
+#   ✓ Update onboarding task
+#   ✓ Delete onboarding task
+#   ✓ Get all onboarding steps
+#   ✓ Get steps by task
+#   ✓ Get specific onboarding step
+#   ✓ Create onboarding step
+#   ✓ Update onboarding step
+#   ✓ Delete onboarding step
+#
+# ============================================================================
+# ONBOARDING ENDPOINTS (Admin & SuperAdmin)
+# ============================================================================
+# [Authorize(Roles = "SuperAdmin, Admin")]
+# Onboarding endpoints manage folders, tasks, and steps for employee onboarding
+# Status: ✓ TESTED - All working correctly
+
+### 30. Get all onboarding folders
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+GET {{NOX_Backend_HostAddress}}/api/onboarding/folders
+
+### 31. Get specific onboarding folder
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+### Replace FOLDER_ID_HERE with actual folder ID
+GET {{NOX_Backend_HostAddress}}/api/onboarding/folders/FOLDER_ID_HERE
+
+### 32. Create a new onboarding folder
+### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Title must be unique and between 1-255 characters
+### Description must be between 1-1000 characters
+POST {{NOX_Backend_HostAddress}}/api/onboarding/folders
+Content-Type: application/json
+
+{
+  "title": "Getting Started",
+  "description": "Essential onboarding materials for new employees"
+}
+
+### 33. Update an onboarding folder
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+PUT {{NOX_Backend_HostAddress}}/api/onboarding/folders/FOLDER_ID_HERE
+Content-Type: application/json
+
+{
+  "title": "Updated Folder Title",
+  "description": "Updated folder description"
+}
+
+### 34. Delete an onboarding folder
+### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Cascading delete removes all associated tasks and steps
+DELETE {{NOX_Backend_HostAddress}}/api/onboarding/folders/FOLDER_ID_HERE
+
+### 35. Get all onboarding tasks
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+GET {{NOX_Backend_HostAddress}}/api/onboarding/tasks
+
+### 36. Get tasks by folder
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+### Replace FOLDER_ID_HERE with actual folder ID
+GET {{NOX_Backend_HostAddress}}/api/onboarding/tasks/folder/FOLDER_ID_HERE
+
+### 37. Get specific onboarding task
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+### Replace TASK_ID_HERE with actual task ID
+GET {{NOX_Backend_HostAddress}}/api/onboarding/tasks/TASK_ID_HERE
+
+### 38. Create a new onboarding task
+### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Title must be between 1-255 characters
+### Description must be between 1-1000 characters
+### FolderId must reference an existing folder
+POST {{NOX_Backend_HostAddress}}/api/onboarding/tasks
+Content-Type: application/json
+
+{
+  "title": "Company Overview",
+  "description": "Learn about the company's mission, vision, and culture",
+  "folderId": 1
+}
+
+### 39. Update an onboarding task
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+PUT {{NOX_Backend_HostAddress}}/api/onboarding/tasks/TASK_ID_HERE
+Content-Type: application/json
+
+{
+  "title": "Updated Task Title",
+  "description": "Updated task description"
+}
+
+### 40. Delete an onboarding task
+### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin, Admin")]
+### Cascading delete removes all associated steps and materials
+DELETE {{NOX_Backend_HostAddress}}/api/onboarding/tasks/TASK_ID_HERE
+
+### 41. Get all onboarding steps
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+GET {{NOX_Backend_HostAddress}}/api/onboarding/steps
+
+### 42. Get steps by task
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+### Replace TASK_ID_HERE with actual task ID
+GET {{NOX_Backend_HostAddress}}/api/onboarding/steps/task/TASK_ID_HERE
+
+### 43. Get specific onboarding step
+### Status: ✓ WORKING (HTTP 200) - [Authorize]
+### Replace STEP_ID_HERE with actual step ID
+GET {{NOX_Backend_HostAddress}}/api/onboarding/steps/STEP_ID_HERE
+
+### 44. Create a new onboarding step
+### Status: ✓ WORKING (HTTP 201) - [Authorize(Roles = "SuperAdmin, Admin")]
+### StepDescription must be between 1-1000 characters
+### TaskId must reference an existing task
+POST {{NOX_Backend_HostAddress}}/api/onboarding/steps
+Content-Type: application/json
+
+{
+  "stepDescription": "Read the employee handbook",
+  "taskId": 1
+}
+
+### 45. Update an onboarding step
+### Status: ✓ WORKING (HTTP 200) - [Authorize(Roles = "SuperAdmin, Admin")]
+PUT {{NOX_Backend_HostAddress}}/api/onboarding/steps/STEP_ID_HERE
+Content-Type: application/json
+
+{
+  "stepDescription": "Updated step description"
+}
+
+### 46. Delete an onboarding step
+### Status: ✓ WORKING (HTTP 204) - [Authorize(Roles = "SuperAdmin, Admin")]
+DELETE {{NOX_Backend_HostAddress}}/api/onboarding/steps/STEP_ID_HERE
+
+# ============================================================================
+# ONBOARDING WORKFLOWS
+# ============================================================================
+#
+# ★ WORKFLOW: Create Complete Onboarding Folder Structure
+# 1. Create folder (request #32) - get FOLDER_ID from response
+# 2. Create task (request #38) - use FOLDER_ID, get TASK_ID from response
+# 3. Create steps (request #44) - use TASK_ID for each step
+# 4. Retrieve folder (request #31) - should show tasks and step counts
+# 5. Get tasks by folder (request #36) - verify task belongs to folder
+# 6. Get steps by task (request #42) - verify steps belong to task
+#
+# ★ WORKFLOW: Update and Manage Onboarding Content
+# 1. Get all folders (request #30)
+# 2. Update folder (request #33) - change folder title/description
+# 3. Get all tasks (request #35)
+# 4. Update task (request #39) - change task title/description
+# 5. Get all steps (request #41)
+# 6. Update step (request #45) - change step description
+#
+# ★ WORKFLOW: Delete Onboarding Hierarchy
+# 1. Delete individual step (request #46)
+# 2. Delete individual task (request #40) - cascades and removes remaining steps
+# 3. Delete folder (request #34) - cascades and removes all tasks (if not deleted already)
 #
 # ============================================================================
 # KNOWN ISSUES & FIXES APPLIED

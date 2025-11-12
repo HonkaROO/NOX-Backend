@@ -55,6 +55,7 @@ Access Swagger UI at: **`http://localhost:5164/swagger/index.html`**
 ### 3. Login with Default Credentials
 
 **SuperAdmin Account (created automatically):**
+
 - Email: `superadmin@nox.local`
 - Password: `SuperAdmin@2024!Nox`
 
@@ -159,17 +160,20 @@ dotnet ef migrations remove                # Remove last migration
 ### Testing API Endpoints
 
 **Option 1: REST Client (Recommended)**
+
 - Install "REST Client" extension in VS Code (by Huachao Mao)
 - Open `NOX-Backend.http` file in project root
 - Click "Send Request" links to execute requests
 - Cookies are automatically handled (like a browser)
 
 **Option 2: Swagger UI**
+
 - Navigate to `http://localhost:5164/swagger/index.html`
 - Login first via `/api/authentication/login` endpoint
 - Test subsequent endpoints with automatic cookie inclusion
 
 **Option 3: curl**
+
 ```bash
 # Login and save cookies
 curl -X POST http://localhost:5164/api/authentication/login \
@@ -194,17 +198,18 @@ Complete endpoint documentation is available in the `/Documentation` folder. Her
 
 User authentication, logout, and profile management using cookie-based authentication.
 
-| Endpoint | Method | Auth Required | Description |
-|----------|--------|:-------------:|-------------|
-| `/login` | POST | ✗ | Login with email/password; sets authentication cookie |
-| `/me` | GET | ✓ | Get current user profile |
-| `/me` | PUT | ✓ | Update current user profile (name, phone, address) |
-| `/logout` | POST | ✓ | Logout and clear authentication cookie |
-| `/access-denied` | GET | ✗ | Returns 403 Forbidden for access denied scenarios |
+| Endpoint         | Method | Auth Required | Description                                           |
+| ---------------- | ------ | :-----------: | ----------------------------------------------------- |
+| `/login`         | POST   |       ✗       | Login with email/password; sets authentication cookie |
+| `/me`            | GET    |       ✓       | Get current user profile                              |
+| `/me`            | PUT    |       ✓       | Update current user profile (name, phone, address)    |
+| `/logout`        | POST   |       ✓       | Logout and clear authentication cookie                |
+| `/access-denied` | GET    |       ✗       | Returns 403 Forbidden for access denied scenarios     |
 
 **Authentication:** Cookie-based (HttpOnly, 7-day expiration with sliding window)
 
 **Example Login:**
+
 ```bash
 curl -X POST http://localhost:5164/api/authentication/login \
   -H "Content-Type: application/json" \
@@ -221,24 +226,27 @@ curl -X POST http://localhost:5164/api/authentication/login \
 
 User account creation and administration. SuperAdmin can manage all users; Admin can only manage User-role accounts.
 
-| Endpoint | Method | Role | Description |
-|----------|--------|:----:|-------------|
-| `/` | GET | SA/A | Get all users (filtered by role) |
-| `/dashboard/statistics` | GET | SA/A | Get total employee and department counts |
-| `/{userId}` | GET | SA/A | Get specific user |
-| `/` | POST | SA/A | Create new user |
-| `/{userId}` | PUT | SA/A | Update user information |
-| `/{userId}` | DELETE | SA/A | Deactivate user |
-| `/{userId}/reset-password` | POST | SA/A | Reset user password |
+| Endpoint                   | Method | Role | Description                              |
+| -------------------------- | ------ | :--: | ---------------------------------------- |
+| `/`                        | GET    | SA/A | Get all users (filtered by role)         |
+| `/dashboard/statistics`    | GET    | SA/A | Get total employee and department counts |
+| `/{userId}`                | GET    | SA/A | Get specific user                        |
+| `/`                        | POST   | SA/A | Create new user                          |
+| `/{userId}`                | PUT    | SA/A | Update user information                  |
+| `/{userId}`                | DELETE | SA/A | Deactivate user                          |
+| `/{userId}/reset-password` | POST   | SA/A | Reset user password                      |
 
 **Required Fields for Create User:**
+
 - `userName`, `email`, `password`, `firstName`, `lastName`, `departmentId`
 
 **Password Requirements:**
+
 - Minimum 8 characters
 - Must include uppercase, lowercase, digit, and special character
 
 **Example Create User:**
+
 ```bash
 curl -X POST http://localhost:5164/api/usermanagement \
   -H "Content-Type: application/json" \
@@ -263,20 +271,22 @@ curl -X POST http://localhost:5164/api/usermanagement \
 
 Role management and user role assignments.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Get all available roles |
-| `/user/{userId}` | GET | Get user's assigned roles |
-| `/user/{userId}/assign` | POST | Assign role to user |
-| `/user/{userId}/remove/{roleName}` | DELETE | Remove role from user |
-| `/{roleName}/users` | GET | Get all users with specified role |
+| Endpoint                           | Method | Description                       |
+| ---------------------------------- | ------ | --------------------------------- |
+| `/`                                | GET    | Get all available roles           |
+| `/user/{userId}`                   | GET    | Get user's assigned roles         |
+| `/user/{userId}/assign`            | POST   | Assign role to user               |
+| `/user/{userId}/remove/{roleName}` | DELETE | Remove role from user             |
+| `/{roleName}/users`                | GET    | Get all users with specified role |
 
 **Three-Tier Role Hierarchy:**
+
 - **SuperAdmin** - Full system access (manage all users and roles)
 - **Admin** - Moderate system access (manage only User-role accounts)
 - **User** - Standard user (view/update own profile only)
 
 **Example Assign Role:**
+
 ```bash
 curl -X POST http://localhost:5164/api/rolemanagement/user/user-id-123/assign \
   -H "Content-Type: application/json" \
@@ -294,16 +304,17 @@ curl -X POST http://localhost:5164/api/rolemanagement/user/user-id-123/assign \
 
 Department management and organization of users.
 
-| Endpoint | Method | Role | Description |
-|----------|--------|:----:|-------------|
-| `/` | GET | Any | Get all departments |
-| `/{id}` | GET | Any | Get specific department |
-| `/` | POST | SA/A | Create new department |
-| `/{id}` | PUT | SA/A | Update department |
-| `/{id}/manager` | PUT | SA/A | Assign manager to department |
-| `/{id}` | DELETE | SA | Soft-delete department |
+| Endpoint        | Method | Role | Description                  |
+| --------------- | ------ | :--: | ---------------------------- |
+| `/`             | GET    | Any  | Get all departments          |
+| `/{id}`         | GET    | Any  | Get specific department      |
+| `/`             | POST   | SA/A | Create new department        |
+| `/{id}`         | PUT    | SA/A | Update department            |
+| `/{id}/manager` | PUT    | SA/A | Assign manager to department |
+| `/{id}`         | DELETE |  SA  | Soft-delete department       |
 
 **Default Departments** (auto-created):
+
 1. Unassigned
 2. Engineering
 3. Human Resources
@@ -311,6 +322,7 @@ Department management and organization of users.
 5. Support
 
 **Example Create Department:**
+
 ```bash
 curl -X POST http://localhost:5164/api/departments \
   -H "Content-Type: application/json" \
@@ -330,6 +342,7 @@ curl -X POST http://localhost:5164/api/departments \
 CORS (Cross-Origin Resource Sharing) configuration for enabling seamless integration with React and Vite development servers. Includes allowed origins, methods, headers, credentials handling, and troubleshooting for common CORS issues.
 
 **Key Features:**
+
 - Development-only CORS policy
 - Cookie-based authentication support
 - Allowed origins for Vite (port 5173/5174) and Create-React-App (port 3000/3001)
@@ -343,6 +356,7 @@ CORS (Cross-Origin Resource Sharing) configuration for enabling seamless integra
 ### Cookie-Based Authentication
 
 This API uses **HTTP-only cookie-based authentication** (not Bearer tokens). Cookies are:
+
 - **HttpOnly** - JavaScript cannot access (prevents XSS)
 - **Secure** - HTTPS only in production
 - **SameSite=Strict** - CSRF protection
@@ -400,12 +414,12 @@ public async Task<IActionResult> AdminOrSuperAdmin() { }
 
 Automatically created on first application startup:
 
-| Field | Value |
-|-------|-------|
+| Field              | Value                  |
+| ------------------ | ---------------------- |
 | **Email/Username** | `superadmin@nox.local` |
-| **Password** | `SuperAdmin@2024!Nox` |
-| **Role** | SuperAdmin |
-| **Department** | System Administration |
+| **Password**       | `SuperAdmin@2024!Nox`  |
+| **Role**           | SuperAdmin             |
+| **Department**     | System Administration  |
 
 ⚠️ **Change these credentials immediately in production!**
 
@@ -416,6 +430,7 @@ Automatically created on first application startup:
 ### Overview
 
 The Department system organizes users into organizational units:
+
 - Each user must belong to exactly one department
 - Departments can have an optional manager (must belong to that department)
 - Each department can manage multiple users
@@ -424,6 +439,7 @@ The Department system organizes users into organizational units:
 ### Database Schema
 
 **Departments Table:**
+
 - `Id` (int) - Primary key
 - `Name` (nvarchar, unique) - Department name
 - `Description` (nvarchar, nullable) - Department description
@@ -432,22 +448,26 @@ The Department system organizes users into organizational units:
 - `CreatedAt`, `UpdatedAt` - Timestamps
 
 **Relationships:**
+
 - Department ↔ Users (one-to-many)
 - Department → Manager (one-to-one, optional)
 
 ### Department-User Workflow
 
 **Add User to Department:**
+
 1. Create user via `UserManagementController.CreateUser()` with `departmentId`
 2. User belongs to specified department
 3. User appears in department's user count
 
 **Reassign User to Different Department:**
+
 1. Update user via `UserManagementController.UpdateUser()` with new `departmentId`
 2. Old department user count decreases
 3. New department user count increases
 
 **Delete Department:**
+
 - Only SuperAdmin can delete departments
 - Cannot delete department with assigned users
 - Use soft-delete (sets `IsActive = false`)
@@ -577,6 +597,7 @@ Cannot connect to server at localhost,1433
 ```
 
 **Solution:**
+
 1. Verify SQL Server container is running: `docker ps`
 2. If not running, start it:
    ```bash
@@ -593,6 +614,7 @@ The migrations assembly referenced by DbContext could not be loaded
 ```
 
 **Solution:**
+
 ```bash
 # Rebuild project
 dotnet build
@@ -610,6 +632,7 @@ No executable found matching command "dotnet-ef"
 ```
 
 **Solution:**
+
 ```bash
 # Install EF Core tools globally
 dotnet tool install --global dotnet-ef
@@ -621,6 +644,7 @@ dotnet tool update --global dotnet-ef
 ### SSL/Certificate Errors (HTTPS Profile)
 
 **Solution:**
+
 - Use HTTP profile for development: `dotnet run --launch-profile http`
 - Or trust development certificate:
   ```bash
@@ -632,6 +656,7 @@ dotnet tool update --global dotnet-ef
 **Symptom:** "Port already in use" or unexpected behavior
 
 **Solution:**
+
 ```bash
 # Kill all dotnet processes
 killall dotnet
@@ -643,6 +668,7 @@ dotnet run --launch-profile http
 ### Default User Already Exists (RoleSeederService)
 
 **Solution:**
+
 ```bash
 # Reset database (⚠️ CAUTION: deletes all data)
 dotnet ef database drop
@@ -662,8 +688,6 @@ For detailed endpoint documentation, see the `/Documentation` folder:
 - **[Role Management Controller Documentation](./Documentation/ROLE_MANAGEMENT_CONTROLLER.md)** - Role assignment and management
 - **[Department Controller Documentation](./Documentation/DEPARTMENT_CONTROLLER.md)** - Department management endpoints
 - **[CORS Setup Guide](./Documentation/CORS_SETUP.md)** - CORS configuration for React/Vite frontend
-
-For development guidance, see [CLAUDE.md](./CLAUDE.md) (project architecture and setup).
 
 ---
 
