@@ -229,14 +229,9 @@ Access denied (Admin cannot create non-User roles)
 **Validation Rules:**
 - Email must be unique (cannot duplicate existing email)
 - Username must be unique
-- Password must meet requirements (two-level validation):
-  - API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
-  - UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
-    - Must contain uppercase letter
-    - Must contain lowercase letter
-    - Must contain digit
-    - Must contain non-alphanumeric character (special character)
-  - **Effective minimum: 8 characters with complexity requirements**
+- Password must meet requirements:
+  - Minimum 8 characters
+  - Must include uppercase, lowercase, digit, and special character
 - Phone must be a valid phone number format (via `[Phone]` attribute)
 - FirstName max 100 characters
 - LastName max 100 characters
@@ -406,13 +401,8 @@ Resets a user's password to a new value. Admin can only reset passwords for User
 - `500 Internal Server Error` - Server error
 
 **Password Validation Rules:**
-- API Level: Minimum 8 characters, maximum 100 characters (via `[StringLength(100, MinimumLength = 8)]`)
-- UserManager Level: Must also satisfy ASP.NET Core Identity requirements:
-  - Must contain uppercase letter
-  - Must contain lowercase letter
-  - Must contain digit
-  - Must contain non-alphanumeric character (special character)
-- **Effective requirement: 8 characters minimum with complexity (uppercase, lowercase, digit, special character)**
+- Minimum 8 characters
+- Must include uppercase, lowercase, digit, and special character
 
 **Implementation Notes:**
 - Removes old password first
