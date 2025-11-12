@@ -6,7 +6,7 @@
 # ============================================================================
 # This file contains all API endpoints for NOX-Backend with test results.
 # Status: ✓ ALL ENDPOINTS TESTED AND WORKING (Updated: 2025-11-12)
-# Total Endpoints: 44 (7 Authentication, 7 User Management, 8 Role Management, 6 Department, 14 Onboarding, 2 Protected)
+# Total Endpoints: 47 (7 Authentication, 7 User Management, 8 Role Management, 6 Department, 17 Onboarding, 2 Protected)
 #
 # AUTHENTICATION METHOD: Cookie-Based (HTTP-only, SameSite=Lax)
 # - After login, authentication cookie is automatically set in response headers
@@ -431,7 +431,7 @@ GET {{NOX_Backend_HostAddress}}/weatherforecast
 # ✓ Protected Endpoints: 1/1 WORKING
 #   ✓ Weather forecast
 #
-# ✓ Onboarding Endpoints: 14/14 WORKING
+# ✓ Onboarding Endpoints: 17/17 WORKING
 #   ✓ Get all onboarding folders
 #   ✓ Get specific onboarding folder
 #   ✓ Create onboarding folder

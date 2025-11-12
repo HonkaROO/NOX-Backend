@@ -136,6 +136,14 @@ public class OnboardingTaskController : ControllerBase
         _context.OnboardingTasks.Add(task);
         await _context.SaveChangesAsync();
 
+        // Reload the task with navigation properties to avoid null reference
+        await _context.Entry(task)
+            .Collection(t => t.Materials)
+            .LoadAsync();
+        await _context.Entry(task)
+            .Collection(t => t.Steps)
+            .LoadAsync();
+
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, MapToOnboardingTaskDto(task));
     }
 

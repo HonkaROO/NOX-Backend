@@ -4,7 +4,7 @@ public class OnboardingSteps
 {
     public int Id { get; set; }
     public required string StepDescription { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
     // Foreign Keys

@@ -6,12 +6,12 @@ public class OnboardingMaterial
     public required string FileName { get; set; }
     public required string FileType { get; set; }
     public required string Url { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
     // Foreign Keys
     public int TaskId { get; set; }
 
     // Relationships
-    public OnboardingTask? Task { get; set; }
+    public required OnboardingTask Task { get; set; }
 }

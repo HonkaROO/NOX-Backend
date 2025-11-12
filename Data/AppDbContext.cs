@@ -131,13 +131,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
             entity.Property(t => t.CreatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
 
-            // Foreign key constraint for Folder
-            entity.HasOne(t => t.Folder)
-                .WithMany(f => f.Tasks)
-                .HasForeignKey(t => t.FolderId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_OnboardingTasks_OnboardingFolder");
-
             // Configure Task -> Materials relationship (one-to-many)
             entity.HasMany(t => t.Materials)
                 .WithOne(m => m.Task)
@@ -172,13 +165,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
 
             entity.Property(m => m.CreatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
-
-            // Foreign key constraint for Task
-            entity.HasOne(m => m.Task)
-                .WithMany(t => t.Materials)
-                .HasForeignKey(m => m.TaskId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_OnboardingMaterials_OnboardingTask");
         });
 
         // Configure OnboardingSteps entity
@@ -192,13 +178,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
 
             entity.Property(s => s.CreatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
-
-            // Foreign key constraint for Task
-            entity.HasOne(s => s.Task)
-                .WithMany(t => t.Steps)
-                .HasForeignKey(s => s.TaskId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_OnboardingSteps_OnboardingTask");
         });
     }
 }
