@@ -77,7 +77,7 @@ public class AzureBlobStorageService
                         ContentType = file.ContentType
                     }
                 };
-                await blobClient.UploadAsync(stream, overwrite: true, options: uploadOptions);
+                await blobClient.UploadAsync(stream, options: uploadOptions);
             }
 
             _logger.LogInformation("File '{BlobName}' uploaded successfully to Azure Blob Storage.", blobName);
