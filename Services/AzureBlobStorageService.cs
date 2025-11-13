@@ -5,7 +5,7 @@ namespace NOX_Backend.Services;
 
 /// <summary>
 /// Service for managing Azure Blob Storage operations.
-/// Handles uploading, downloading, and deleting files from Azure Blob Storage.
+/// Handles uploading and deleting files from Azure Blob Storage.
 /// </summary>
 public class AzureBlobStorageService
 {
@@ -23,6 +23,19 @@ public class AzureBlobStorageService
         string containerName,
         ILogger<AzureBlobStorageService> logger)
     {
+        if (blobServiceClient == null)
+        {
+            throw new ArgumentNullException(nameof(blobServiceClient));
+        }
+        if (string.IsNullOrWhiteSpace(containerName))
+        {
+            throw new ArgumentException("Container name cannot be null or empty.", nameof(containerName));
+        }
+        if (logger == null)
+        {
+            throw new ArgumentNullException(nameof(logger));
+        }
+
         _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         _logger = logger;
     }
@@ -34,12 +47,21 @@ public class AzureBlobStorageService
     /// <param name="blobName">The name to give the blob in storage.</param>
     /// <returns>The URL of the uploaded blob.</returns>
     /// <exception cref="ArgumentNullException">Thrown if file is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if file is empty or blobName is invalid.</exception>
     /// <exception cref="IOException">Thrown if file reading fails.</exception>
     public async Task<string> UploadFileAsync(IFormFile file, string blobName)
     {
-        if (file == null || file.Length == 0)
+        if (file == null)
         {
-            throw new ArgumentNullException(nameof(file), "File cannot be null or empty.");
+            throw new ArgumentNullException(nameof(file));
+        }
+        if (file.Length == 0)
+        {
+            throw new ArgumentException("File cannot be empty.", nameof(file));
+        }
+        if (string.IsNullOrWhiteSpace(blobName))
+        {
+            throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
         }
 
         try
@@ -48,7 +70,14 @@ public class AzureBlobStorageService
 
             using (var stream = file.OpenReadStream())
             {
-                await blobClient.UploadAsync(stream, overwrite: true);
+                var uploadOptions = new BlobUploadOptions
+                {
+                    HttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = file.ContentType
+                    }
+                };
+                await blobClient.UploadAsync(stream, overwrite: true, options: uploadOptions);
             }
 
             _logger.LogInformation("File '{BlobName}' uploaded successfully to Azure Blob Storage.", blobName);
@@ -72,19 +101,27 @@ public class AzureBlobStorageService
     /// </summary>
     /// <param name="blobName">The name of the blob to delete.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown if blobName is null or empty.</exception>
     public async Task DeleteBlobAsync(string blobName)
     {
+        if (string.IsNullOrWhiteSpace(blobName))
+        {
+            throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
+        }
+
         try
         {
             BlobClient blobClient = _containerClient.GetBlobClient(blobName);
-            await blobClient.DeleteAsync();
+            var result = await blobClient.DeleteIfExistsAsync();
 
-            _logger.LogInformation("Blob '{BlobName}' deleted successfully from Azure Blob Storage.", blobName);
-        }
-        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
-        {
-            _logger.LogWarning("Blob '{BlobName}' not found in Azure Blob Storage.", blobName);
-            // Don't throw for 404 as blob may have already been deleted
+            if (result.Value)
+            {
+                _logger.LogInformation("Blob '{BlobName}' deleted successfully from Azure Blob Storage.", blobName);
+            }
+            else
+            {
+                _logger.LogWarning("Blob '{BlobName}' not found in Azure Blob Storage.", blobName);
+            }
         }
         catch (Azure.RequestFailedException ex)
         {
@@ -102,13 +139,27 @@ public class AzureBlobStorageService
     /// Generates a unique blob name using the file name and a timestamp.
     /// </summary>
     /// <param name="fileName">The original file name.</param>
+    /// <param name="prefix">The prefix for the blob path (default: "materials").</param>
     /// <returns>A unique blob name.</returns>
-    public static string GenerateUniqueBlobName(string fileName)
+    /// <exception cref="ArgumentException">Thrown if fileName is null or empty.</exception>
+    public static string GenerateUniqueBlobName(string fileName, string prefix = "materials")
     {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
+        }
+
+        // Normalize prefix
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            prefix = "materials";
+        }
+        prefix = prefix.Trim('/');
+
         var fileExtension = Path.GetExtension(fileName);
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
-        return $"materials/{fileNameWithoutExtension}_{timestamp}{fileExtension}";
+        return $"{prefix}/{fileNameWithoutExtension}_{timestamp}{fileExtension}";
     }
 
 }

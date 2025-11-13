@@ -109,12 +109,52 @@ public class OnboardingMaterialController : ControllerBase
     public async Task<ActionResult<OnboardingMaterialDto>> CreateMaterial(
         [FromForm] CreateOnboardingMaterialRequest request)
     {
+        // File size limit: 50MB
+        const long MaxFileSize = 50 * 1024 * 1024;
+
+        // Allowed content types
+        var AllowedContentTypes = new[]
+        {
+            "application/pdf",
+            "text/plain",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "image/jpeg",
+            "image/png",
+            "image/gif"
+        };
+
+        // Allowed extensions
+        var AllowedExtensions = new[]
+        {
+            ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
+        };
+
         try
         {
             // Validate input
             if (request.File == null || request.File.Length == 0)
             {
                 return BadRequest(new { message = "File is required and must not be empty." });
+            }
+
+            // Validate file size
+            if (request.File.Length > MaxFileSize)
+            {
+                return BadRequest(new { message = "File size cannot exceed 50MB." });
+            }
+
+            // Validate file type
+            if (!AllowedContentTypes.Contains(request.File.ContentType))
+            {
+                return BadRequest(new { message = "File type is not allowed." });
+            }
+
+            // Validate file extension
+            var fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+            if (!AllowedExtensions.Contains(fileExtension))
+            {
+                return BadRequest(new { message = "File extension is not allowed." });
             }
 
             if (request.TaskId <= 0)
@@ -150,9 +190,9 @@ public class OnboardingMaterialController : ControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Material '{FileName}' created successfully for task {TaskId}.",
-                request.File.FileName,
-                request.TaskId);
+                "Material created successfully for task {TaskId} with ID {MaterialId}.",
+                request.TaskId,
+                material.Id);
 
             return CreatedAtAction(nameof(GetMaterial), new { id = material.Id }, MapToOnboardingMaterialDto(material));
         }
@@ -197,26 +237,61 @@ public class OnboardingMaterialController : ControllerBase
             // If a new file is provided, upload it and delete the old one
             if (request.File != null && request.File.Length > 0)
             {
+                // Validate file size
+                const long MaxFileSize = 50 * 1024 * 1024;
+                var AllowedContentTypes = new[]
+                {
+                    "application/pdf", "text/plain",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "image/jpeg", "image/png", "image/gif"
+                };
+                var AllowedExtensions = new[] { ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif" };
+
+                if (request.File.Length > MaxFileSize)
+                    return BadRequest(new { message = "File size cannot exceed 50MB." });
+
+                if (!AllowedContentTypes.Contains(request.File.ContentType))
+                    return BadRequest(new { message = "File type is not allowed." });
+
+                var fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+                if (!AllowedExtensions.Contains(fileExtension))
+                    return BadRequest(new { message = "File extension is not allowed." });
+
                 // Generate unique blob name for new file
                 string newBlobName = AzureBlobStorageService.GenerateUniqueBlobName(request.File.FileName);
 
                 // Upload new file to Azure Blob Storage
                 string newFileUrl = await _blobStorageService.UploadFileAsync(request.File, newBlobName);
 
-                // Delete old blob
-                string oldBlobName = ExtractBlobNameFromUrl(material.Url);
-                await _blobStorageService.DeleteBlobAsync(oldBlobName);
-
-                // Update material properties
+                // Update material properties with new file info
                 material.FileName = request.File.FileName;
                 material.FileType = request.File.ContentType ?? "application/octet-stream";
                 material.Url = newFileUrl;
+                material.UpdatedAt = DateTime.UtcNow;
+
+                // Save DB changes first to persist new URL
+                _context.OnboardingMaterials.Update(material);
+                await _context.SaveChangesAsync();
+
+                // Only attempt to delete old blob after DB update succeeds
+                try
+                {
+                    string oldBlobName = ExtractBlobNameFromUrl(material.Url);
+                    await _blobStorageService.DeleteBlobAsync(oldBlobName);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail if old blob deletion fails
+                    _logger.LogWarning(ex, "Failed to delete old blob for material {MaterialId}, but DB update succeeded.", id);
+                }
             }
-
-            material.UpdatedAt = DateTime.UtcNow;
-
-            _context.OnboardingMaterials.Update(material);
-            await _context.SaveChangesAsync();
+            else
+            {
+                material.UpdatedAt = DateTime.UtcNow;
+                _context.OnboardingMaterials.Update(material);
+                await _context.SaveChangesAsync();
+            }
 
             _logger.LogInformation("Material {MaterialId} updated successfully.", id);
 
@@ -255,13 +330,21 @@ public class OnboardingMaterialController : ControllerBase
                 return NotFound(new { message = "Onboarding material not found." });
             }
 
-            // Delete blob from Azure Blob Storage
-            string blobName = ExtractBlobNameFromUrl(material.Url);
-            await _blobStorageService.DeleteBlobAsync(blobName);
-
-            // Delete material from database
+            // Delete material from database first
             _context.OnboardingMaterials.Remove(material);
             await _context.SaveChangesAsync();
+
+            // Only attempt to delete blob after DB deletion succeeds
+            try
+            {
+                string blobName = ExtractBlobNameFromUrl(material.Url);
+                await _blobStorageService.DeleteBlobAsync(blobName);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail if blob deletion fails - DB is already updated
+                _logger.LogWarning(ex, "Failed to delete blob for material {MaterialId}, but DB deletion succeeded.", id);
+            }
 
             _logger.LogInformation("Material {MaterialId} deleted successfully.", id);
 
@@ -303,18 +386,38 @@ public class OnboardingMaterialController : ControllerBase
     /// </summary>
     /// <param name="url">The full URL of the blob.</param>
     /// <returns>The blob name (path and filename).</returns>
+    /// <exception cref="ArgumentException">Thrown if URL is null/empty or not a valid Azure Blob Storage URL.</exception>
     private static string ExtractBlobNameFromUrl(string url)
     {
-        // URL format: https://{account}.blob.core.windows.net/{container}/{blobName}
-        var uri = new Uri(url);
-        var pathSegments = uri.AbsolutePath.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-        if (pathSegments.Length >= 2)
+        if (string.IsNullOrWhiteSpace(url))
         {
+            throw new ArgumentException("URL cannot be null or empty.", nameof(url));
+        }
+
+        try
+        {
+            // URL format: https://{account}.blob.core.windows.net/{container}/{blobName}
+            var uri = new Uri(url);
+
+            // Validate that this is an Azure Blob Storage URL
+            if (!uri.Host.Contains(".blob.core.windows.net"))
+            {
+                throw new ArgumentException("URL is not a valid Azure Blob Storage URL.", nameof(url));
+            }
+
+            var pathSegments = uri.AbsolutePath.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            if (pathSegments.Length < 2)
+            {
+                throw new ArgumentException("URL does not contain a valid blob path.", nameof(url));
+            }
+
             // Skip the container name (first segment) and join the rest
             return string.Join("/", pathSegments.Skip(1));
         }
-
-        return url;
+        catch (UriFormatException ex)
+        {
+            throw new ArgumentException($"URL is not in a valid format: {url}", nameof(url), ex);
+        }
     }
 }

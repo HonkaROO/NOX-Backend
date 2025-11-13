@@ -19,5 +19,6 @@ public class UpdateOnboardingStepsRequest
     /// Gets or sets the sequence order of the step within its task.
     /// If specified, will reorder the step within the task.
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int? SequenceOrder { get; set; }
 }
