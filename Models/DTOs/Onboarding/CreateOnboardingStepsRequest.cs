@@ -16,6 +16,12 @@ public class CreateOnboardingStepsRequest
     public required string StepDescription { get; set; }
 
     /// <summary>
+    /// Gets or sets the sequence order of the step within its task.
+    /// If not specified (0 or null), will be auto-assigned as the next available sequence number.
+    /// </summary>
+    public int? SequenceOrder { get; set; }
+
+    /// <summary>
     /// Gets or sets the ID of the task this step belongs to.
     /// </summary>
     public int TaskId { get; set; }
