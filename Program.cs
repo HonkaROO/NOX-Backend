@@ -2,12 +2,37 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
 using NOX_Backend.Services;
+using Azure.Identity;
+using Azure.Storage.Blobs;
+using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file only in development
+if (builder.Environment.IsDevelopment())
+{
+    Env.Load();
+}
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Configure Azure Blob Storage
+var azureStorageAccountName = Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
+    ?? throw new InvalidOperationException("AZURE_STORAGE_ACCOUNT_NAME environment variable is not set.");
+
+var blobServiceUri = new Uri($"https://{azureStorageAccountName}.blob.core.windows.net");
+var tokenCredential = new DefaultAzureCredential();
+
+builder.Services.AddSingleton(new BlobServiceClient(blobServiceUri, tokenCredential));
+builder.Services.AddScoped(provider =>
+{
+    var blobServiceClient = provider.GetRequiredService<BlobServiceClient>();
+    var logger = provider.GetRequiredService<ILogger<AzureBlobStorageService>>();
+    const string containerName = "onboarding-materials";
+    return new AzureBlobStorageService(blobServiceClient, containerName, logger);
+});
 
 // Configure Identity with cookie-based authentication
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
