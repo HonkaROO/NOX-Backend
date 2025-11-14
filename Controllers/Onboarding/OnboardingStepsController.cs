@@ -116,21 +116,34 @@ public class OnboardingStepsController : ControllerBase
             return BadRequest(new { message = "The specified task does not exist." });
         }
 
-        // Auto-assign SequenceOrder if not provided
-        var sequenceOrder = request.SequenceOrder ?? await GetNextSequenceOrderAsync(request.TaskId);
-
-        var step = new OnboardingSteps
+        // Use transaction with serializable isolation to prevent race condition on sequence assignment
+        using (var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable))
         {
-            StepDescription = request.StepDescription,
-            TaskId = request.TaskId,
-            SequenceOrder = sequenceOrder,
-            CreatedAt = DateTime.UtcNow
-        };
+            try
+            {
+                // Auto-assign SequenceOrder if not provided
+                var sequenceOrder = request.SequenceOrder ?? await GetNextSequenceOrderAsync(request.TaskId);
 
-        _context.OnboardingSteps.Add(step);
-        await _context.SaveChangesAsync();
+                var step = new OnboardingSteps
+                {
+                    StepDescription = request.StepDescription,
+                    TaskId = request.TaskId,
+                    SequenceOrder = sequenceOrder,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-        return CreatedAtAction(nameof(GetStep), new { id = step.Id }, MapToOnboardingStepsDto(step));
+                _context.OnboardingSteps.Add(step);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return CreatedAtAction(nameof(GetStep), new { id = step.Id }, MapToOnboardingStepsDto(step));
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 
     /// <summary>
@@ -158,14 +171,19 @@ public class OnboardingStepsController : ControllerBase
             return BadRequest(new { message = "StepDescription is required and must be between 1 and 1000 characters." });
         }
 
-        step.StepDescription = request.StepDescription;
-
         // Handle sequence order reordering if provided
         if (request.SequenceOrder.HasValue)
         {
             await ReorderStepsAsync(step.TaskId, step.Id, request.SequenceOrder.Value);
+            // Refresh step from database after reordering
+            step = await _context.OnboardingSteps.FirstOrDefaultAsync(s => s.Id == id);
+            if (step == null)
+            {
+                return NotFound(new { message = "Onboarding step not found." });
+            }
         }
 
+        step.StepDescription = request.StepDescription;
         step.UpdatedAt = DateTime.UtcNow;
 
         _context.OnboardingSteps.Update(step);
@@ -229,41 +247,56 @@ public class OnboardingStepsController : ControllerBase
     /// <summary>
     /// Reorders steps within a task.
     /// Adjusts sequence numbers of other steps when a step is moved.
+    /// Uses a serializable transaction to prevent race conditions.
     /// </summary>
     /// <param name="taskId">The task ID containing the steps.</param>
     /// <param name="stepId">The step ID being moved.</param>
     /// <param name="newSequenceOrder">The new sequence order for the step.</param>
     private async Task ReorderStepsAsync(int taskId, int stepId, int newSequenceOrder)
     {
-        var allSteps = await _context.OnboardingSteps
-            .Where(s => s.TaskId == taskId)
-            .OrderBy(s => s.SequenceOrder)
-            .ToListAsync();
-
-        var stepToMove = allSteps.FirstOrDefault(s => s.Id == stepId);
-        if (stepToMove == null)
+        using (var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable))
         {
-            return;
+            try
+            {
+                // Re-query steps inside the transaction to ensure consistency
+                var allSteps = await _context.OnboardingSteps
+                    .Where(s => s.TaskId == taskId)
+                    .OrderBy(s => s.SequenceOrder)
+                    .ToListAsync();
+
+                var stepToMove = allSteps.FirstOrDefault(s => s.Id == stepId);
+                if (stepToMove == null)
+                {
+                    await transaction.CommitAsync();
+                    return;
+                }
+
+                var oldSequenceOrder = stepToMove.SequenceOrder;
+
+                // Remove the step from its current position
+                allSteps.Remove(stepToMove);
+
+                // Clamp the new sequence order to valid range
+                newSequenceOrder = Math.Max(1, Math.Min(newSequenceOrder, allSteps.Count + 1));
+
+                // Insert at new position
+                allSteps.Insert(newSequenceOrder - 1, stepToMove);
+
+                // Reassign sequence numbers
+                for (int i = 0; i < allSteps.Count; i++)
+                {
+                    allSteps[i].SequenceOrder = i + 1;
+                    allSteps[i].UpdatedAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
-        var oldSequenceOrder = stepToMove.SequenceOrder;
-
-        // Remove the step from its current position
-        allSteps.Remove(stepToMove);
-
-        // Clamp the new sequence order to valid range
-        newSequenceOrder = Math.Max(1, Math.Min(newSequenceOrder, allSteps.Count + 1));
-
-        // Insert at new position
-        allSteps.Insert(newSequenceOrder - 1, stepToMove);
-
-        // Reassign sequence numbers
-        for (int i = 0; i < allSteps.Count; i++)
-        {
-            allSteps[i].SequenceOrder = i + 1;
-            allSteps[i].UpdatedAt = DateTime.UtcNow;
-        }
-
-        await _context.SaveChangesAsync();
     }
 }

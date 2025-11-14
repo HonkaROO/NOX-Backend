@@ -20,6 +20,23 @@ public class OnboardingMaterialController : ControllerBase
     private readonly AzureBlobStorageService _blobStorageService;
     private readonly ILogger<OnboardingMaterialController> _logger;
 
+    // File validation constants
+    private const long MaxFileSize = 50 * 1024 * 1024;
+    private static readonly string[] AllowedContentTypes =
+    {
+        "application/pdf",
+        "text/plain",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "image/jpeg",
+        "image/png",
+        "image/gif"
+    };
+    private static readonly string[] AllowedExtensions =
+    {
+        ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
+    };
+
     /// <summary>
     /// Initializes a new instance of the OnboardingMaterialController.
     /// </summary>
@@ -109,52 +126,13 @@ public class OnboardingMaterialController : ControllerBase
     public async Task<ActionResult<OnboardingMaterialDto>> CreateMaterial(
         [FromForm] CreateOnboardingMaterialRequest request)
     {
-        // File size limit: 50MB
-        const long MaxFileSize = 50 * 1024 * 1024;
-
-        // Allowed content types
-        var AllowedContentTypes = new[]
-        {
-            "application/pdf",
-            "text/plain",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "image/jpeg",
-            "image/png",
-            "image/gif"
-        };
-
-        // Allowed extensions
-        var AllowedExtensions = new[]
-        {
-            ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
-        };
-
         try
         {
-            // Validate input
-            if (request.File == null || request.File.Length == 0)
+            // Validate file
+            var validationResult = ValidateFile(request.File);
+            if (validationResult != null)
             {
-                return BadRequest(new { message = "File is required and must not be empty." });
-            }
-
-            // Validate file size
-            if (request.File.Length > MaxFileSize)
-            {
-                return BadRequest(new { message = "File size cannot exceed 50MB." });
-            }
-
-            // Validate file type
-            if (!AllowedContentTypes.Contains(request.File.ContentType))
-            {
-                return BadRequest(new { message = "File type is not allowed." });
-            }
-
-            // Validate file extension
-            var fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
-            if (!AllowedExtensions.Contains(fileExtension))
-            {
-                return BadRequest(new { message = "File extension is not allowed." });
+                return validationResult;
             }
 
             if (request.TaskId <= 0)
@@ -186,15 +164,32 @@ public class OnboardingMaterialController : ControllerBase
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.OnboardingMaterials.Add(material);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.OnboardingMaterials.Add(material);
+                await _context.SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Material created successfully for task {TaskId} with ID {MaterialId}.",
-                request.TaskId,
-                material.Id);
+                _logger.LogInformation(
+                    "Material created successfully for task {TaskId} with ID {MaterialId}.",
+                    request.TaskId,
+                    material.Id);
 
-            return CreatedAtAction(nameof(GetMaterial), new { id = material.Id }, MapToOnboardingMaterialDto(material));
+                return CreatedAtAction(nameof(GetMaterial), new { id = material.Id }, MapToOnboardingMaterialDto(material));
+            }
+            catch (Exception ex)
+            {
+                // If database save fails, delete the uploaded blob to prevent orphaned files
+                try
+                {
+                    await _blobStorageService.DeleteBlobAsync(blobName);
+                    _logger.LogWarning(ex, "Database save failed for material creation, blob {BlobName} was deleted.", blobName);
+                }
+                catch (Exception deleteEx)
+                {
+                    _logger.LogError(deleteEx, "Failed to delete orphaned blob {BlobName} after database save failure.", blobName);
+                }
+                throw;
+            }
         }
         catch (IOException ex)
         {
@@ -237,26 +232,12 @@ public class OnboardingMaterialController : ControllerBase
             // If a new file is provided, upload it and delete the old one
             if (request.File != null && request.File.Length > 0)
             {
-                // Validate file size
-                const long MaxFileSize = 50 * 1024 * 1024;
-                var AllowedContentTypes = new[]
+                // Validate file
+                var validationResult = ValidateFile(request.File);
+                if (validationResult != null)
                 {
-                    "application/pdf", "text/plain",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "image/jpeg", "image/png", "image/gif"
-                };
-                var AllowedExtensions = new[] { ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif" };
-
-                if (request.File.Length > MaxFileSize)
-                    return BadRequest(new { message = "File size cannot exceed 50MB." });
-
-                if (!AllowedContentTypes.Contains(request.File.ContentType))
-                    return BadRequest(new { message = "File type is not allowed." });
-
-                var fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
-                if (!AllowedExtensions.Contains(fileExtension))
-                    return BadRequest(new { message = "File extension is not allowed." });
+                    return validationResult;
+                }
 
                 // Generate unique blob name for new file
                 string newBlobName = AzureBlobStorageService.GenerateUniqueBlobName(request.File.FileName);
@@ -362,6 +343,37 @@ public class OnboardingMaterialController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError,
                 new { message = "An unexpected error occurred during material deletion." });
         }
+    }
+
+    /// <summary>
+    /// Validates a file for upload (checks size, content type, and extension).
+    /// </summary>
+    /// <param name="file">The file to validate.</param>
+    /// <returns>A BadRequest ActionResult if validation fails, null if validation succeeds.</returns>
+    private ActionResult? ValidateFile(IFormFile? file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "File is required and must not be empty." });
+        }
+
+        if (file.Length > MaxFileSize)
+        {
+            return BadRequest(new { message = "File size cannot exceed 50MB." });
+        }
+
+        if (!AllowedContentTypes.Contains(file.ContentType))
+        {
+            return BadRequest(new { message = "File type is not allowed." });
+        }
+
+        var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(fileExtension))
+        {
+            return BadRequest(new { message = "File extension is not allowed." });
+        }
+
+        return null;
     }
 
     /// <summary>

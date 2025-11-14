@@ -15,12 +15,12 @@ namespace NOX_Backend.Models
         /// <summary>
         /// Foreign key reference to the ApplicationUser who started the conversation.
         /// </summary>
-        public string? UserId { get; set; }
+        public string UserId { get; set; } = null!;
 
         /// <summary>
         /// Navigation property for the associated ApplicationUser.
         /// </summary>
-        public ApplicationUser? User { get; set; }
+        public ApplicationUser User { get; set; } = null!;
 
         /// <summary>
         /// Timestamp when the conversation was started.

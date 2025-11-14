@@ -6,10 +6,13 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using DotNetEnv;
 
-// Load environment variables from .env file
-Env.Load();
-
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file only in development
+if (builder.Environment.IsDevelopment())
+{
+    Env.Load();
+}
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
