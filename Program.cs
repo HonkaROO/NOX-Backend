@@ -34,6 +34,13 @@ builder.Services.AddScoped(provider =>
     return new AzureBlobStorageService(blobServiceClient, containerName, logger);
 });
 
+// Configure HttpClient and AI Document Service
+builder.Services.AddHttpClient<AiDocumentService>()
+    .ConfigureHttpClient((serviceProvider, httpClient) =>
+    {
+        httpClient.Timeout = TimeSpan.FromSeconds(60);
+    });
+
 // Configure Identity with cookie-based authentication
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {

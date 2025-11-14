@@ -18,6 +18,7 @@ public class OnboardingMaterialController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly AzureBlobStorageService _blobStorageService;
+    private readonly AiDocumentService _aiDocumentService;
     private readonly ILogger<OnboardingMaterialController> _logger;
 
     // File validation constants
@@ -26,6 +27,9 @@ public class OnboardingMaterialController : ControllerBase
     {
         "application/pdf",
         "text/plain",
+        "text/markdown",
+        "text/x-markdown",
+        "application/x-markdown",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "image/jpeg",
@@ -34,7 +38,7 @@ public class OnboardingMaterialController : ControllerBase
     };
     private static readonly string[] AllowedExtensions =
     {
-        ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
+        ".pdf", ".txt", ".md", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
     };
 
     /// <summary>
@@ -43,10 +47,12 @@ public class OnboardingMaterialController : ControllerBase
     public OnboardingMaterialController(
         AppDbContext context,
         AzureBlobStorageService blobStorageService,
+        AiDocumentService aiDocumentService,
         ILogger<OnboardingMaterialController> logger)
     {
         _context = context;
         _blobStorageService = blobStorageService;
+        _aiDocumentService = aiDocumentService;
         _logger = logger;
     }
 
@@ -169,6 +175,35 @@ public class OnboardingMaterialController : ControllerBase
                 _context.OnboardingMaterials.Add(material);
                 await _context.SaveChangesAsync();
 
+                // Upload to AI service if file type is supported (pdf, json, md)
+                if (AiDocumentService.IsSupportedFileType(request.File.FileName))
+                {
+                    try
+                    {
+                        var aiResponse = await _aiDocumentService.UploadDocumentAsync(fileUrl);
+                        if (!aiResponse.Success)
+                        {
+                            _logger.LogWarning(
+                                "AI service reported failure for material {MaterialId}: {Message}",
+                                material.Id,
+                                aiResponse.Message);
+                            // Continue despite AI failure - material is already in database
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Material {MaterialId} successfully synced to AI service ({DocumentsAdded} chunks).",
+                                material.Id,
+                                aiResponse.DocumentsAdded);
+                        }
+                    }
+                    catch (Exception aiEx)
+                    {
+                        _logger.LogWarning(aiEx, "Failed to upload material {MaterialId} to AI service, but database save succeeded.", material.Id);
+                        // Continue despite AI failure - material is already in database
+                    }
+                }
+
                 _logger.LogInformation(
                     "Material created successfully for task {TaskId} with ID {MaterialId}.",
                     request.TaskId,
@@ -239,6 +274,11 @@ public class OnboardingMaterialController : ControllerBase
                     return validationResult;
                 }
 
+                // Store old URL for AI service update
+                string oldFileUrl = material.Url;
+                bool shouldUpdateAi = AiDocumentService.IsSupportedFileType(request.File.FileName) ||
+                                     AiDocumentService.IsSupportedFileType(material.FileName);
+
                 // Generate unique blob name for new file
                 string newBlobName = AzureBlobStorageService.GenerateUniqueBlobName(request.File.FileName);
 
@@ -255,10 +295,38 @@ public class OnboardingMaterialController : ControllerBase
                 _context.OnboardingMaterials.Update(material);
                 await _context.SaveChangesAsync();
 
+                // Update AI service if either old or new file type is supported
+                if (shouldUpdateAi)
+                {
+                    try
+                    {
+                        var aiResponse = await _aiDocumentService.UpdateDocumentAsync(oldFileUrl, newFileUrl);
+                        if (!aiResponse.Success)
+                        {
+                            _logger.LogWarning(
+                                "AI service reported failure for material {MaterialId}: {Message}",
+                                material.Id,
+                                aiResponse.Message);
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Material {MaterialId} successfully updated in AI service ({DocumentsDeleted} deleted, {DocumentsAdded} added).",
+                                material.Id,
+                                aiResponse.DocumentsDeleted,
+                                aiResponse.DocumentsAdded);
+                        }
+                    }
+                    catch (Exception aiEx)
+                    {
+                        _logger.LogWarning(aiEx, "Failed to update material {MaterialId} in AI service, but database update succeeded.", material.Id);
+                    }
+                }
+
                 // Only attempt to delete old blob after DB update succeeds
                 try
                 {
-                    string oldBlobName = ExtractBlobNameFromUrl(material.Url);
+                    string oldBlobName = ExtractBlobNameFromUrl(oldFileUrl);
                     await _blobStorageService.DeleteBlobAsync(oldBlobName);
                 }
                 catch (Exception ex)
@@ -311,7 +379,35 @@ public class OnboardingMaterialController : ControllerBase
                 return NotFound(new { message = "Onboarding material not found." });
             }
 
-            // Delete material from database first
+            // Delete from AI service if file type is supported
+            if (AiDocumentService.IsSupportedFileType(material.FileName))
+            {
+                try
+                {
+                    var aiResponse = await _aiDocumentService.DeleteDocumentAsync(material.Url);
+                    if (!aiResponse.Success)
+                    {
+                        _logger.LogWarning(
+                            "AI service reported failure deleting material {MaterialId}: {Message}",
+                            id,
+                            aiResponse.Message);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "Material {MaterialId} successfully deleted from AI service ({DocumentsDeleted} chunks removed).",
+                            id,
+                            aiResponse.DocumentsDeleted);
+                    }
+                }
+                catch (Exception aiEx)
+                {
+                    _logger.LogWarning(aiEx, "Failed to delete material {MaterialId} from AI service, but will continue with database deletion.", id);
+                    // Continue with database deletion even if AI delete fails
+                }
+            }
+
+            // Delete material from database
             _context.OnboardingMaterials.Remove(material);
             await _context.SaveChangesAsync();
 
