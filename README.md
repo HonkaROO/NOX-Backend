@@ -335,6 +335,34 @@ curl -X POST http://localhost:5164/api/departments \
 
 ---
 
+### [Onboarding Controller Documentation](./Documentation/ONBOARDING_CONTROLLER.md)
+
+**Route:** `/api/onboarding`
+
+**⚠️ NOTE:** These endpoints are not yet tested.
+
+Hierarchical onboarding content management with folders, tasks, steps, and materials. Includes file upload to Azure Blob Storage and AI document indexing.
+
+**Included Controllers:**
+
+| Controller | Route | Description |
+|-----------|-------|-------------|
+| Folder | `/api/onboarding/folders` | Organize onboarding content into folders |
+| Task | `/api/onboarding/tasks` | Create tasks within folders |
+| Steps | `/api/onboarding/steps` | Add sequential steps to tasks |
+| Material | `/api/onboarding/materials` | Upload files (PDF, images, documents) to tasks |
+
+**Key Features:**
+
+- Hierarchical structure: Folder → Task → Steps + Materials
+- File upload with Azure Blob Storage integration
+- Automatic AI document indexing for supported formats (PDF, Markdown, JSON)
+- Step sequencing with automatic reordering
+- File size limit: 50MB per file
+- Supported formats: PDF, Word, Excel, images, text, markdown
+
+---
+
 ### [CORS Setup Guide](./Documentation/CORS_SETUP.md)
 
 **Configuration:** CORS for React/Vite Frontend Development
@@ -687,6 +715,7 @@ For detailed endpoint documentation, see the `/Documentation` folder:
 - **[User Management Controller Documentation](./Documentation/USER_MANAGEMENT_CONTROLLER.md)** - User CRUD and admin endpoints
 - **[Role Management Controller Documentation](./Documentation/ROLE_MANAGEMENT_CONTROLLER.md)** - Role assignment and management
 - **[Department Controller Documentation](./Documentation/DEPARTMENT_CONTROLLER.md)** - Department management endpoints
+- **[Onboarding Controller Documentation](./Documentation/ONBOARDING_CONTROLLER.md)** - Onboarding folders, tasks, steps, and materials (⚠️ Not tested)
 - **[CORS Setup Guide](./Documentation/CORS_SETUP.md)** - CORS configuration for React/Vite frontend
 
 ---
