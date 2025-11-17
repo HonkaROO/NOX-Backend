@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
 using NOX_Backend.Models.Onboarding;
+using Backend.Models.Onboarding;
 
 public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, string>
 {
@@ -44,6 +45,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
     /// DbSet for ChatMessage entities.
     /// </summary>
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    /// <summary>
+    /// DbSet for Requirement entities.
+    /// </summary>
+    public DbSet<Requirement> Requirements { get; set; } = null!;
+    /// <summary>
+    /// DbSet for UserRequirement entities.
+    /// </summary>
+    public DbSet<UserRequirement> UserRequirements { get; set; } = null!;
+
 
     /// <summary>
     /// Configures entity relationships, constraints, and indexes.
@@ -228,5 +238,48 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
             entity.Property(m => m.SentAt)
                 .HasDefaultValueSql("GETUTCDATE()");
         });
+
+        // Requirement entity
+        modelBuilder.Entity<Requirement>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.Category)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(r => r.Name)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.Property(r => r.IsActive)
+                .HasDefaultValue(true);
+
+            entity.HasMany(r => r.UserRequirements)
+                .WithOne(ur => ur.Requirement)
+                .HasForeignKey(ur => ur.RequirementId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        // UserRequirement
+        modelBuilder.Entity<UserRequirement>(entity =>
+        {
+            entity.HasOne(ur => ur.User)
+                .WithMany(u => u.SubmittedRequirements)
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ur => ur.Requirement)
+                .WithMany(r => r.UserRequirements)
+                .HasForeignKey(ur => ur.RequirementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ur => ur.Reviewer)
+                .WithMany(u => u.ReviewedRequirements)
+                .HasForeignKey(ur => ur.ReviewerId)
+                .OnDelete(DeleteBehavior.NoAction); // reviewer should NOT be deleted
+        });
+
     }
 }
