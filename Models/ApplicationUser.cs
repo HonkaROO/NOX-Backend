@@ -1,3 +1,4 @@
+using Backend.Models.Onboarding;
 using Microsoft.AspNetCore.Identity;
 
 namespace NOX_Backend.Models;
@@ -73,4 +74,14 @@ public class ApplicationUser : IdentityUser
     /// Gets the user's full name by combining first and last names.
     /// </summary>
     public string GetFullName() => $"{FirstName} {LastName}".Trim();
+    /// <summary>
+    /// Navigation: Requirements assigned to the user
+    /// </summary>
+    public ICollection<UserRequirement> SubmittedRequirements { get; set; } = new List<UserRequirement>();
+
+    /// <summary>
+    /// Navigation: Requirements reviewed by the user
+    /// </summary>
+    public ICollection<UserRequirement> ReviewedRequirements { get; set; } = new List<UserRequirement>();
+
 }
