@@ -45,6 +45,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
     /// </summary>
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
     /// <summary>
+    /// DbSet for UserOnboardingTaskProgress entities.
+    /// </summary>
+    public DbSet<UserOnboardingTaskProgress> UserTaskProgress { get; set; } = null!;
+
+    /// <summary>
     /// Configures entity relationships, constraints, and indexes.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -226,6 +231,23 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
 
             entity.Property(m => m.SentAt)
                 .HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        modelBuilder.Entity<UserOnboardingTaskProgress>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.Status)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId);
+
+            entity.HasOne(p => p.Task)
+                .WithMany()
+                .HasForeignKey(p => p.TaskId);
         });
     }
 }

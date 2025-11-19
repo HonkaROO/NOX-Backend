@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
 using NOX_Backend.Models.DTOs;
+using NOX_Backend.Models.Onboarding;
 
 namespace NOX_Backend.Controllers;
 
@@ -221,6 +222,21 @@ public class UserManagementController : ControllerBase
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return BadRequest(new { message = "Failed to create user", errors });
             }
+
+            var tasks = await _context.OnboardingTasks.ToListAsync();
+
+            foreach (var task in tasks)
+            {
+                _context.UserTaskProgress.Add(new UserOnboardingTaskProgress
+                {
+                    UserId = user.Id,
+                    TaskId = task.Id,
+                    Status = "pending",
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+
+        await _context.SaveChangesAsync();
 
             // Assign role - default to "User" if not specified or if Admin creating
             var roleToAssign = string.IsNullOrEmpty(request.Role) ? "User" : request.Role;
