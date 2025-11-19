@@ -268,6 +268,7 @@ public class AzureBlobStorageController : ControllerBase
     /// GET /api/azureblobstorage/containers/{containerName}/blobs
     /// </summary>
     [HttpGet("containers/{containerName}/blobs")]
+    [AllowAnonymous]
     public async Task<ActionResult<object>> ListBlobs(string containerName)
     {
         if (!IsAzureServiceConfigured())
