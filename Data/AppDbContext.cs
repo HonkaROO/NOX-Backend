@@ -36,6 +36,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
     public DbSet<OnboardingSteps> OnboardingSteps { get; set; } = null!;
 
     /// <summary>
+    /// DbSet for Conversation entities.
+    /// </summary>
+    public DbSet<Conversation> Conversations { get; set; } = null!;
+
+    /// <summary>
+    /// DbSet for ChatMessage entities.
+    /// </summary>
+    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    /// <summary>
     /// Configures entity relationships, constraints, and indexes.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -177,6 +186,45 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
                 .HasMaxLength(1000);
 
             entity.Property(s => s.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Configure Conversation entity
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(c => c.ConvoId);
+
+            entity.Property(c => c.StartedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            // Configure Conversation -> ApplicationUser relationship (many-to-one)
+            entity.HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade) // Delete conversations when user is deleted
+                .HasConstraintName("FK_Conversations_ApplicationUser");
+
+            // Configure Conversation -> ChatMessages relationship (one-to-many)
+            entity.HasMany(c => c.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.ConvoId)
+                .OnDelete(DeleteBehavior.Cascade) // Delete messages when conversation is deleted
+                .HasConstraintName("FK_ChatMessages_Conversation");
+        });
+
+        // Configure ChatMessage entity
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(m => m.MessageId);
+
+            entity.Property(m => m.Sender)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(m => m.Message)
+                .IsRequired();
+
+            entity.Property(m => m.SentAt)
                 .HasDefaultValueSql("GETUTCDATE()");
         });
     }

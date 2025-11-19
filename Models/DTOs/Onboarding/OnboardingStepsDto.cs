@@ -17,6 +17,12 @@ public class OnboardingStepsDto
     public required string StepDescription { get; set; }
 
     /// <summary>
+    /// Gets or sets the sequence order of the step within its task.
+    /// Lower numbers appear first.
+    /// </summary>
+    public int SequenceOrder { get; set; }
+
+    /// <summary>
     /// Gets or sets the ID of the task this step belongs to.
     /// </summary>
     public int TaskId { get; set; }

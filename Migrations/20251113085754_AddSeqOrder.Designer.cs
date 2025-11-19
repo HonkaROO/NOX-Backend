@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace NOX_Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251113085754_AddSeqOrder")]
+    partial class AddSeqOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -20,77 +23,6 @@ namespace NOX_Backend.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Backend.Models.Onboarding.Requirement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Requirements", "dbo");
-                });
-
-            modelBuilder.Entity("Backend.Models.Onboarding.UserRequirement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FileUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RequirementId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReviewerId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("SubmittedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RequirementId");
-
-                    b.HasIndex("ReviewerId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserRequirements", "dbo");
-                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -324,62 +256,6 @@ namespace NOX_Backend.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("NOX_Backend.Models.ChatMessage", b =>
-                {
-                    b.Property<int>("MessageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
-
-                    b.Property<int>("ConvoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Sender")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("SentAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.HasKey("MessageId");
-
-                    b.HasIndex("ConvoId");
-
-                    b.ToTable("ChatMessages");
-                });
-
-            modelBuilder.Entity("NOX_Backend.Models.Conversation", b =>
-                {
-                    b.Property<int>("ConvoId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConvoId"));
-
-                    b.Property<DateTime>("StartedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("ConvoId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Conversations");
-                });
-
             modelBuilder.Entity("NOX_Backend.Models.Department", b =>
                 {
                     b.Property<int>("Id")
@@ -570,32 +446,6 @@ namespace NOX_Backend.Migrations
                     b.ToTable("OnboardingTasks");
                 });
 
-            modelBuilder.Entity("Backend.Models.Onboarding.UserRequirement", b =>
-                {
-                    b.HasOne("Backend.Models.Onboarding.Requirement", "Requirement")
-                        .WithMany("UserRequirements")
-                        .HasForeignKey("RequirementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NOX_Backend.Models.ApplicationUser", "Reviewer")
-                        .WithMany("ReviewedRequirements")
-                        .HasForeignKey("ReviewerId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("NOX_Backend.Models.ApplicationUser", "User")
-                        .WithMany("SubmittedRequirements")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Requirement");
-
-                    b.Navigation("Reviewer");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -659,30 +509,6 @@ namespace NOX_Backend.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("NOX_Backend.Models.ChatMessage", b =>
-                {
-                    b.HasOne("NOX_Backend.Models.Conversation", "Conversation")
-                        .WithMany("Messages")
-                        .HasForeignKey("ConvoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_ChatMessages_Conversation");
-
-                    b.Navigation("Conversation");
-                });
-
-            modelBuilder.Entity("NOX_Backend.Models.Conversation", b =>
-                {
-                    b.HasOne("NOX_Backend.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_Conversations_ApplicationUser");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("NOX_Backend.Models.Department", b =>
                 {
                     b.HasOne("NOX_Backend.Models.ApplicationUser", "Manager")
@@ -730,23 +556,9 @@ namespace NOX_Backend.Migrations
                     b.Navigation("Folder");
                 });
 
-            modelBuilder.Entity("Backend.Models.Onboarding.Requirement", b =>
-                {
-                    b.Navigation("UserRequirements");
-                });
-
             modelBuilder.Entity("NOX_Backend.Models.ApplicationUser", b =>
                 {
                     b.Navigation("ManagedDepartment");
-
-                    b.Navigation("ReviewedRequirements");
-
-                    b.Navigation("SubmittedRequirements");
-                });
-
-            modelBuilder.Entity("NOX_Backend.Models.Conversation", b =>
-                {
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("NOX_Backend.Models.Department", b =>

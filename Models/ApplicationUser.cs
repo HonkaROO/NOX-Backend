@@ -73,4 +73,5 @@ public class ApplicationUser : IdentityUser
     /// Gets the user's full name by combining first and last names.
     /// </summary>
     public string GetFullName() => $"{FirstName} {LastName}".Trim();
+
 }

@@ -4,261 +4,162 @@ using Azure.Storage.Blobs.Models;
 namespace NOX_Backend.Services;
 
 /// <summary>
-/// Service for interacting with Azure Blob Storage.
-/// Uses ClientSecretCredential for Azure AD authentication via dependency injection from Program.cs.
-/// The BlobServiceClient is registered in Program.cs with credentials from environment variables:
-/// AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_STORAGE_ACCOUNT_NAME
+/// Service for managing Azure Blob Storage operations.
+/// Handles uploading and deleting files from Azure Blob Storage.
 /// </summary>
 public class AzureBlobStorageService
 {
-    private readonly BlobServiceClient _blobServiceClient;
+    private readonly BlobContainerClient _containerClient;
     private readonly ILogger<AzureBlobStorageService> _logger;
 
-    public AzureBlobStorageService(BlobServiceClient blobServiceClient, ILogger<AzureBlobStorageService> logger)
+    /// <summary>
+    /// Initializes a new instance of the AzureBlobStorageService.
+    /// </summary>
+    /// <param name="blobServiceClient">The BlobServiceClient for authentication and connection.</param>
+    /// <param name="containerName">The name of the Blob Storage container.</param>
+    /// <param name="logger">The logger instance.</param>
+    public AzureBlobStorageService(
+        BlobServiceClient blobServiceClient,
+        string containerName,
+        ILogger<AzureBlobStorageService> logger)
     {
-        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient),
-            "BlobServiceClient is null. Ensure Azure credentials (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_STORAGE_ACCOUNT_NAME) are properly configured in environment variables.");
+        if (blobServiceClient == null)
+        {
+            throw new ArgumentNullException(nameof(blobServiceClient));
+        }
+        if (string.IsNullOrWhiteSpace(containerName))
+        {
+            throw new ArgumentException("Container name cannot be null or empty.", nameof(containerName));
+        }
+        if (logger == null)
+        {
+            throw new ArgumentNullException(nameof(logger));
+        }
+
+        _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         _logger = logger;
-
-        _logger.LogInformation("Azure Blob Storage service initialized successfully");
     }
 
     /// <summary>
-    /// Tests the connection to Azure Blob Storage by listing containers.
+    /// Uploads a file to Azure Blob Storage.
     /// </summary>
-    public async Task<bool> TestConnectionAsync()
+    /// <param name="file">The file to upload.</param>
+    /// <param name="blobName">The name to give the blob in storage.</param>
+    /// <returns>The URL of the uploaded blob.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if file is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if file is empty or blobName is invalid.</exception>
+    /// <exception cref="IOException">Thrown if file reading fails.</exception>
+    public async Task<string> UploadFileAsync(IFormFile file, string blobName)
     {
+        if (file == null)
+        {
+            throw new ArgumentNullException(nameof(file));
+        }
+        if (file.Length == 0)
+        {
+            throw new ArgumentException("File cannot be empty.", nameof(file));
+        }
+        if (string.IsNullOrWhiteSpace(blobName))
+        {
+            throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
+        }
+
         try
         {
-            var enumerator = _blobServiceClient.GetBlobContainersAsync().GetAsyncEnumerator();
-            var hasContainers = await enumerator.MoveNextAsync();
-            await enumerator.DisposeAsync();
+            BlobClient blobClient = _containerClient.GetBlobClient(blobName);
 
-            _logger.LogInformation("Azure Blob Storage connection test successful");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Azure Blob Storage connection test failed");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Gets a list of all blob containers.
-    /// </summary>
-    public async Task<List<string>> ListContainersAsync()
-    {
-        try
-        {
-            var containers = new List<string>();
-            await foreach (var container in _blobServiceClient.GetBlobContainersAsync())
+            using (var stream = file.OpenReadStream())
             {
-                containers.Add(container.Name);
+                var uploadOptions = new BlobUploadOptions
+                {
+                    HttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = file.ContentType
+                    }
+                };
+                await blobClient.UploadAsync(stream, options: uploadOptions);
             }
 
-            _logger.LogInformation("Retrieved {ContainerCount} containers", containers.Count);
-            return containers;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to list containers");
-            throw;
-        }
-    }
+            _logger.LogInformation("File '{BlobName}' uploaded successfully to Azure Blob Storage.", blobName);
 
-    /// <summary>
-    /// Creates a blob container if it doesn't exist.
-    /// </summary>
-    public async Task<bool> CreateContainerAsync(string containerName)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(containerName))
-            {
-                throw new ArgumentException("Container name cannot be null or empty", nameof(containerName));
-            }
-
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var response = await containerClient.CreateIfNotExistsAsync();
-
-            // Check if the response was successful (HTTP 201 Created) or already exists (HTTP 409 Conflict)
-            if (response?.GetRawResponse()?.Status == 201)
-            {
-                _logger.LogInformation("Created blob container: {ContainerName}", containerName);
-                return true;
-            }
-
-            _logger.LogInformation("Blob container already exists or creation was not successful: {ContainerName}", containerName);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create container: {ContainerName}", containerName);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Uploads a file to a blob container.
-    /// </summary>
-    public async Task<string> UploadBlobAsync(string containerName, string blobName, Stream stream, bool overwrite = true)
-    {
-        try
-        {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
-
-            // Ensure container exists
-            await containerClient.CreateIfNotExistsAsync();
-
-            // Upload with overwrite option
-            await blobClient.UploadAsync(stream, overwrite);
-
-            _logger.LogInformation("Successfully uploaded blob: {BlobName} to container: {ContainerName}", blobName, containerName);
             return blobClient.Uri.ToString();
         }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Azure Blob Storage error while uploading file '{BlobName}'.", blobName);
+            throw new IOException($"Failed to upload file to Azure Blob Storage: {ex.Message}", ex);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to upload blob: {BlobName} to container: {ContainerName}", blobName, containerName);
+            _logger.LogError(ex, "Unexpected error while uploading file '{BlobName}' to Azure Blob Storage.", blobName);
             throw;
         }
     }
 
     /// <summary>
-    /// Downloads a blob from a container.
+    /// Deletes a blob from Azure Blob Storage.
     /// </summary>
-    public async Task<Stream> DownloadBlobAsync(string containerName, string blobName)
+    /// <param name="blobName">The name of the blob to delete.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown if blobName is null or empty.</exception>
+    public async Task DeleteBlobAsync(string blobName)
     {
+        if (string.IsNullOrWhiteSpace(blobName))
+        {
+            throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
+        }
+
         try
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
+            BlobClient blobClient = _containerClient.GetBlobClient(blobName);
+            var result = await blobClient.DeleteIfExistsAsync();
 
-            var download = await blobClient.DownloadAsync();
-
-            _logger.LogInformation("Successfully downloaded blob: {BlobName} from container: {ContainerName}", blobName, containerName);
-            return download.Value.Content;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to download blob: {BlobName} from container: {ContainerName}", blobName, containerName);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Lists all blobs in a container.
-    /// </summary>
-    public async Task<List<string>> ListBlobsAsync(string containerName)
-    {
-        try
-        {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobs = new List<string>();
-
-            await foreach (var blob in containerClient.GetBlobsAsync())
+            if (result.Value)
             {
-                blobs.Add(blob.Name);
-            }
-
-            _logger.LogInformation("Retrieved {BlobCount} blobs from container: {ContainerName}", blobs.Count, containerName);
-            return blobs;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to list blobs in container: {ContainerName}", containerName);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Deletes a blob from a container.
-    /// </summary>
-    public async Task<bool> DeleteBlobAsync(string containerName, string blobName)
-    {
-        try
-        {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
-
-            var response = await blobClient.DeleteIfExistsAsync();
-
-            if (response.Value)
-            {
-                _logger.LogInformation("Successfully deleted blob: {BlobName} from container: {ContainerName}", blobName, containerName);
+                _logger.LogInformation("Blob '{BlobName}' deleted successfully from Azure Blob Storage.", blobName);
             }
             else
             {
-                _logger.LogInformation("Blob does not exist: {BlobName} in container: {ContainerName}", blobName, containerName);
+                _logger.LogWarning("Blob '{BlobName}' not found in Azure Blob Storage.", blobName);
             }
-
-            return response.Value;
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Azure Blob Storage error while deleting blob '{BlobName}'.", blobName);
+            throw new IOException($"Failed to delete blob from Azure Blob Storage: {ex.Message}", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete blob: {BlobName} from container: {ContainerName}", blobName, containerName);
+            _logger.LogError(ex, "Unexpected error while deleting blob '{BlobName}' from Azure Blob Storage.", blobName);
             throw;
         }
     }
 
     /// <summary>
-    /// Deletes a blob container.
+    /// Generates a unique blob name using the file name and a timestamp.
     /// </summary>
-    public async Task<bool> DeleteContainerAsync(string containerName)
+    /// <param name="fileName">The original file name.</param>
+    /// <param name="prefix">The prefix for the blob path (default: "materials").</param>
+    /// <returns>A unique blob name.</returns>
+    /// <exception cref="ArgumentException">Thrown if fileName is null or empty.</exception>
+    public static string GenerateUniqueBlobName(string fileName, string prefix = "materials")
     {
-        try
+        if (string.IsNullOrWhiteSpace(fileName))
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var response = await containerClient.DeleteIfExistsAsync();
-
-            if (response.Value)
-            {
-                _logger.LogInformation("Successfully deleted container: {ContainerName}", containerName);
-            }
-            else
-            {
-                _logger.LogInformation("Container does not exist: {ContainerName}", containerName);
-            }
-
-            return response.Value;
+            throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
         }
-        catch (Exception ex)
+
+        // Normalize prefix
+        if (string.IsNullOrWhiteSpace(prefix))
         {
-            _logger.LogError(ex, "Failed to delete container: {ContainerName}", containerName);
-            throw;
+            prefix = "materials";
         }
+        prefix = prefix.Trim('/');
+
+        var fileExtension = Path.GetExtension(fileName);
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
+        return $"{prefix}/{fileNameWithoutExtension}_{timestamp}{fileExtension}";
     }
 
-    /// <summary>
-    /// Gets blob properties (metadata, size, etc.).
-    /// </summary>
-    public async Task<Dictionary<string, string>> GetBlobPropertiesAsync(string containerName, string blobName)
-    {
-        try
-        {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
-
-            var properties = await blobClient.GetPropertiesAsync();
-
-            var result = new Dictionary<string, string>
-            {
-                { "BlobName", blobName },
-                { "ContainerName", containerName },
-                { "ContentType", properties.Value.ContentType ?? "unknown" },
-                { "ContentLength", properties.Value.ContentLength.ToString() },
-                { "LastModified", properties.Value.LastModified.ToString() },
-                { "ETag", properties.Value.ETag.ToString() }
-            };
-
-            _logger.LogInformation("Retrieved properties for blob: {BlobName}", blobName);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get properties for blob: {BlobName}", blobName);
-            throw;
-        }
-    }
 }
