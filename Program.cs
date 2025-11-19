@@ -1,7 +1,13 @@
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
 using NOX_Backend.Services;
+using DotNetEnv;
+
+// Load environment variables from .env file
+DotNetEnv.Env.Load();
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using DotNetEnv;
@@ -74,6 +80,33 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddScoped<RoleSeederService>();
 builder.Services.AddScoped<DepartmentSeederService>();
+
+// Configure Azure Blob Storage client with ClientSecretCredential
+var tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
+var clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+var clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
+var storageAccountName = Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME");
+
+if (!string.IsNullOrEmpty(tenantId) && !string.IsNullOrEmpty(clientId) &&
+    !string.IsNullOrEmpty(clientSecret) && !string.IsNullOrEmpty(storageAccountName))
+{
+    try
+    {
+        var blobServiceClient = new BlobServiceClient(
+            new Uri($"https://{storageAccountName}.blob.core.windows.net"),
+            new ClientSecretCredential(tenantId, clientId, clientSecret));
+
+        builder.Services.AddSingleton(blobServiceClient);
+        builder.Services.AddScoped<AzureBlobStorageService>();
+
+        Console.WriteLine("✓ Azure Blob Storage client configured successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"✗ Failed to configure Azure Blob Storage client: {ex.Message}");
+        Console.WriteLine("  Ensure credentials are valid and reachable.");
+    }
+}
 
 // Configure CORS for development (React/Vite frontend)
 if (builder.Environment.IsDevelopment())
