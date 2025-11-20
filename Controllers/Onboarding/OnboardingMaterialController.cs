@@ -528,4 +528,14 @@ public class OnboardingMaterialController : ControllerBase
             throw new ArgumentException($"URL is not in a valid format: {url}", nameof(url), ex);
         }
     } 
+
+    /// <summary>
+    /// Lists all blobs in the Azure Blob Storage container.
+    // GET /api/onboarding/materials/blobs
+    [HttpGet("blobs")]
+    public async Task<IActionResult> ListBlobs()
+    {
+        var blobs = await _blobStorageService.ListBlobsAsync();
+        return Ok(blobs);
+    }
 }
