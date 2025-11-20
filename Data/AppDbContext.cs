@@ -47,8 +47,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole, str
     /// <summary>
     /// DbSet for UserOnboardingTaskProgress entities.
     /// </summary>
-    public DbSet<UserOnboardingTaskProgress> UserTaskProgress { get; set; } = null!;
-
+    public DbSet<UserOnboardingTaskProgress> UserOnboardingTaskProgress { get; set; } = null!;
     /// <summary>
     /// Configures entity relationships, constraints, and indexes.
     /// </summary>

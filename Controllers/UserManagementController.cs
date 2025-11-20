@@ -227,7 +227,7 @@ public class UserManagementController : ControllerBase
 
             foreach (var task in tasks)
             {
-                _context.UserTaskProgress.Add(new UserOnboardingTaskProgress
+                _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
                 {
                     UserId = user.Id,
                     TaskId = task.Id,
