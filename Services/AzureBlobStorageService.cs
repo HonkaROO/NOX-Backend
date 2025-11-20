@@ -161,5 +161,31 @@ public class AzureBlobStorageService
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
         return $"{prefix}/{fileNameWithoutExtension}_{timestamp}{fileExtension}";
     }
+    
+    /// <summary>
+    /// Lists all blobs in the container.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<List<string>> ListBlobsAsync()
+    {
+        try
+        {
+            var blobs = new List<string>();
+
+            await foreach (var blob in _containerClient.GetBlobsAsync())
+            {
+                blobs.Add(blob.Name);
+            }
+
+            _logger.LogInformation("Retrieved {BlobCount} blobs from container.", blobs.Count);
+
+            return blobs;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list blobs.");
+            throw;
+        }
+    }
 
 }

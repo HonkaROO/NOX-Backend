@@ -527,5 +527,37 @@ public class OnboardingMaterialController : ControllerBase
         {
             throw new ArgumentException($"URL is not in a valid format: {url}", nameof(url), ex);
         }
+    }  
+
+    /// <summary>
+    /// Lists all blobs in the onboarding materials container.
+    /// </summary>
+    /// <returns></returns>
+    // GET /api/onboarding/materials/blobs
+    [HttpGet("blobs")]
+    public async Task<IActionResult> ListBlobs()
+    {
+        var blobs = await _blobStorageService.ListBlobsAsync();
+        return Ok(blobs);
     }
+
+    /// <summary>
+    /// Uploads a file directly to Azure Blob Storage and returns the file URL.
+    /// </summary>
+    /// <param name="file"></param>
+    /// <returns></returns>
+    // POST /api/onboarding/materials/upload
+    [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        string blobName = AzureBlobStorageService.GenerateUniqueBlobName(file.FileName);
+        string url = await _blobStorageService.UploadFileAsync(file, blobName);
+
+        return Ok(new { fileUrl = url });
+    }
+
 }
