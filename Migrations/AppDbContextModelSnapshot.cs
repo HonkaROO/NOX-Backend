@@ -528,7 +528,7 @@ namespace NOX_Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserTaskProgress");
+                    b.ToTable("UserOnboardingTaskProgress");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

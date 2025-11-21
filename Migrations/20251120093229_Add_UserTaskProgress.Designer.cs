@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace NOX_Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251119085815_Add_UserTaskProgress")]
+    [Migration("20251120093229_Add_UserTaskProgress")]
     partial class Add_UserTaskProgress
     {
         /// <inheritdoc />
@@ -531,7 +531,7 @@ namespace NOX_Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserTaskProgress");
+                    b.ToTable("UserOnboardingTaskProgress");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
