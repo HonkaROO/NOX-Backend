@@ -4,109 +4,85 @@
 
 namespace NOX_Backend.Migrations
 {
-    /// <inheritdoc />
     public partial class Add_UserTaskProgress : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserTaskProgress_AspNetUsers_UserId",
-                table: "UserTaskProgress");
+            // Drop old FKs only if the old table exists
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserTaskProgress')
+BEGIN
+    ALTER TABLE UserTaskProgress DROP CONSTRAINT FK_UserTaskProgress_AspNetUsers_UserId;
+    ALTER TABLE UserTaskProgress DROP CONSTRAINT FK_UserTaskProgress_OnboardingTasks_TaskId;
+END
+");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserTaskProgress_OnboardingTasks_TaskId",
-                table: "UserTaskProgress");
+            // Drop PK if old table exists
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserTaskProgress')
+BEGIN
+    ALTER TABLE UserTaskProgress DROP CONSTRAINT PK_UserTaskProgress;
+END
+");
 
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_UserTaskProgress",
-                table: "UserTaskProgress");
+            // SAFE rename
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserTaskProgress')
+BEGIN
+    EXEC sp_rename 'UserTaskProgress', 'UserOnboardingTaskProgress';
+END
+");
 
-            migrationBuilder.RenameTable(
-                name: "UserTaskProgress",
-                newName: "UserOnboardingTaskProgress");
+            // SAFE index rename
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserOnboardingTaskProgress')
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_UserTaskProgress_UserId')
+        EXEC sp_rename 'UserTaskProgress.IX_UserTaskProgress_UserId', 'IX_UserOnboardingTaskProgress_UserId', 'INDEX';
 
-            migrationBuilder.RenameIndex(
-                name: "IX_UserTaskProgress_UserId",
-                table: "UserOnboardingTaskProgress",
-                newName: "IX_UserOnboardingTaskProgress_UserId");
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_UserTaskProgress_TaskId')
+        EXEC sp_rename 'UserTaskProgress.IX_UserTaskProgress_TaskId', 'IX_UserOnboardingTaskProgress_TaskId', 'INDEX';
+END
+");
 
-            migrationBuilder.RenameIndex(
-                name: "IX_UserTaskProgress_TaskId",
-                table: "UserOnboardingTaskProgress",
-                newName: "IX_UserOnboardingTaskProgress_TaskId");
+            // Add PK on new table
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserOnboardingTaskProgress')
+BEGIN
+    ALTER TABLE UserOnboardingTaskProgress 
+        ADD CONSTRAINT PK_UserOnboardingTaskProgress PRIMARY KEY (Id);
+END
+");
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_UserOnboardingTaskProgress",
-                table: "UserOnboardingTaskProgress",
-                column: "Id");
+            // Add FKs safely
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserOnboardingTaskProgress')
+BEGIN
+    ALTER TABLE UserOnboardingTaskProgress 
+        ADD CONSTRAINT FK_UserOnboardingTaskProgress_AspNetUsers_UserId 
+        FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE;
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_UserOnboardingTaskProgress_AspNetUsers_UserId",
-                table: "UserOnboardingTaskProgress",
-                column: "UserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_UserOnboardingTaskProgress_OnboardingTasks_TaskId",
-                table: "UserOnboardingTaskProgress",
-                column: "TaskId",
-                principalTable: "OnboardingTasks",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+    ALTER TABLE UserOnboardingTaskProgress 
+        ADD CONSTRAINT FK_UserOnboardingTaskProgress_OnboardingTasks_TaskId 
+        FOREIGN KEY (TaskId) REFERENCES OnboardingTasks(Id) ON DELETE CASCADE;
+END
+");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserOnboardingTaskProgress_AspNetUsers_UserId",
-                table: "UserOnboardingTaskProgress");
+            // Reverse operations safely…
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserOnboardingTaskProgress_OnboardingTasks_TaskId",
-                table: "UserOnboardingTaskProgress");
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserOnboardingTaskProgress')
+BEGIN
+    ALTER TABLE UserOnboardingTaskProgress DROP CONSTRAINT FK_UserOnboardingTaskProgress_AspNetUsers_UserId;
+    ALTER TABLE UserOnboardingTaskProgress DROP CONSTRAINT FK_UserOnboardingTaskProgress_OnboardingTasks_TaskId;
+    ALTER TABLE UserOnboardingTaskProgress DROP CONSTRAINT PK_UserOnboardingTaskProgress;
 
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_UserOnboardingTaskProgress",
-                table: "UserOnboardingTaskProgress");
-
-            migrationBuilder.RenameTable(
-                name: "UserOnboardingTaskProgress",
-                newName: "UserTaskProgress");
-
-            migrationBuilder.RenameIndex(
-                name: "IX_UserOnboardingTaskProgress_UserId",
-                table: "UserTaskProgress",
-                newName: "IX_UserTaskProgress_UserId");
-
-            migrationBuilder.RenameIndex(
-                name: "IX_UserOnboardingTaskProgress_TaskId",
-                table: "UserTaskProgress",
-                newName: "IX_UserTaskProgress_TaskId");
-
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_UserTaskProgress",
-                table: "UserTaskProgress",
-                column: "Id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_UserTaskProgress_AspNetUsers_UserId",
-                table: "UserTaskProgress",
-                column: "UserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_UserTaskProgress_OnboardingTasks_TaskId",
-                table: "UserTaskProgress",
-                column: "TaskId",
-                principalTable: "OnboardingTasks",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+    EXEC sp_rename 'UserOnboardingTaskProgress', 'UserTaskProgress';
+END
+");
         }
     }
 }
