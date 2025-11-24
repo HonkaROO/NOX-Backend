@@ -26,6 +26,7 @@ public class OnboardingMaterialController : ControllerBase
     private static readonly string[] AllowedContentTypes =
     {
         "application/pdf",
+        "application/json",
         "text/plain",
         "text/markdown",
         "text/x-markdown",
@@ -38,7 +39,7 @@ public class OnboardingMaterialController : ControllerBase
     };
     private static readonly string[] AllowedExtensions =
     {
-        ".pdf", ".txt", ".md", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
+        ".pdf", ".json", ".xtxt", ".md", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif"
     };
 
     /// <summary>
@@ -537,5 +538,74 @@ public class OnboardingMaterialController : ControllerBase
     {
         var blobs = await _blobStorageService.ListBlobsAsync();
         return Ok(blobs);
+    }
+
+    /// <summary>
+    /// Uploads a file directly to Azure Blob Storage for knowledge injection.
+    /// This endpoint does NOT save to database - it's for AI knowledge base only.
+    /// Files uploaded via this endpoint won't appear in user-facing document management.
+    /// </summary>
+    /// <param name="file">The file to upload (PDF, JSON, or Markdown only).</param>
+    /// <returns>The Azure Blob Storage URL of the uploaded file.</returns>
+    [HttpPost("inject-knowledge")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<object>> InjectKnowledge([FromForm] IFormFile file)
+    {
+        try
+        {
+            // Validate file
+            var validationResult = ValidateFile(file);
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
+
+            // Additional validation: Only allow AI-indexable file types
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (fileExtension != ".pdf" && fileExtension != ".json" && fileExtension != ".md")
+            {
+                return BadRequest(new
+                {
+                    message = "Only PDF, JSON, and Markdown files are supported for knowledge injection."
+                });
+            }
+
+            // Generate unique blob name with "knowledge-base" prefix to distinguish from regular materials
+            string blobName = AzureBlobStorageService.GenerateUniqueBlobName(
+                file.FileName,
+                prefix: "knowledge-base"
+            );
+
+            // Upload file to Azure Blob Storage
+            string fileUrl = await _blobStorageService.UploadFileAsync(file, blobName);
+
+            _logger.LogInformation(
+                "File '{FileName}' uploaded successfully for knowledge injection at URL: {Url}",
+                file.FileName,
+                fileUrl
+            );
+
+            // Return the URL immediately (frontend will handle AI injection)
+            return Ok(new
+            {
+                url = fileUrl,
+                fileName = file.FileName,
+                fileSize = file.Length,
+                message = "File uploaded successfully. Ready for knowledge injection."
+            });
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "File upload failed for knowledge injection.");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "File upload failed. Please try again." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during knowledge injection upload.");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "An unexpected error occurred during file upload." });
+        }
     }
 }

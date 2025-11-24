@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace NOX_Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251120093229_Add_UserTaskProgress")]
-    partial class Add_UserTaskProgress
+    [Migration("20251123075308_UserTaskProgress")]
+    partial class UserTaskProgress
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
