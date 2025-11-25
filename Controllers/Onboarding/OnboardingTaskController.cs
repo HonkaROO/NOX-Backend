@@ -136,6 +136,20 @@ public class OnboardingTaskController : ControllerBase
         _context.OnboardingTasks.Add(task);
         await _context.SaveChangesAsync();
 
+        // Create UserOnboardingTaskProgress records for all existing users with status "pending"
+        var allUsers = await _context.Users.ToListAsync();
+        foreach (var user in allUsers)
+        {
+            _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
+            {
+                UserId = user.Id,
+                TaskId = task.Id,
+                Status = "pending",
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+        await _context.SaveChangesAsync();
+
         // Reload the task with navigation properties to avoid null reference
         await _context.Entry(task)
             .Collection(t => t.Materials)
