@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NOX_Backend.Models;
@@ -16,13 +17,15 @@ namespace NOX_Backend.Controllers.Onboarding;
 public class OnboardingTaskController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     /// <summary>
     /// Initializes a new instance of the OnboardingTaskController.
     /// </summary>
-    public OnboardingTaskController(AppDbContext context)
+    public OnboardingTaskController(AppDbContext context, UserManager<ApplicationUser> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
     /// <summary>
@@ -136,17 +139,21 @@ public class OnboardingTaskController : ControllerBase
         _context.OnboardingTasks.Add(task);
         await _context.SaveChangesAsync();
 
-        // Create UserOnboardingTaskProgress records for all existing users with status "pending"
+        // Create UserOnboardingTaskProgress records only for users with "User" role (exclude Admin and SuperAdmin)
         var allUsers = await _context.Users.ToListAsync();
         foreach (var user in allUsers)
         {
-            _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("User") && !roles.Contains("Admin") && !roles.Contains("SuperAdmin"))
             {
-                UserId = user.Id,
-                TaskId = task.Id,
-                Status = "pending",
-                UpdatedAt = DateTime.UtcNow
-            });
+                _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
+                {
+                    UserId = user.Id,
+                    TaskId = task.Id,
+                    Status = "pending",
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
         }
         await _context.SaveChangesAsync();
 
