@@ -223,23 +223,27 @@ public class UserManagementController : ControllerBase
                 return BadRequest(new { message = "Failed to create user", errors });
             }
 
-            var tasks = await _context.OnboardingTasks.ToListAsync();
-
-            foreach (var task in tasks)
-            {
-                _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
-                {
-                    UserId = user.Id,
-                    TaskId = task.Id,
-                    Status = "pending",
-                    UpdatedAt = DateTime.UtcNow
-                });
-            }
-
-        await _context.SaveChangesAsync();
-
             // Assign role - default to "User" if not specified or if Admin creating
             var roleToAssign = string.IsNullOrEmpty(request.Role) ? "User" : request.Role;
+
+            // Only create onboarding task progress for users with "User" role
+            if (roleToAssign == "User")
+            {
+                var tasks = await _context.OnboardingTasks.ToListAsync();
+
+                foreach (var task in tasks)
+                {
+                    _context.UserOnboardingTaskProgress.Add(new UserOnboardingTaskProgress
+                    {
+                        UserId = user.Id,
+                        TaskId = task.Id,
+                        Status = "pending",
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+            }
 
             // Validate that the role exists before assigning
             var roleExists = await _roleManager.RoleExistsAsync(roleToAssign);

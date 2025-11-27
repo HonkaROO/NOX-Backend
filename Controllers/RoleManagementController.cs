@@ -126,6 +126,32 @@ public class RoleManagementController : ControllerBase
                 return BadRequest(new { message = "Failed to assign role", errors });
             }
 
+            // If assigning "User" role, create onboarding task progress records
+            if (request.RoleName == "User")
+            {
+                var existingTaskProgress = await _context.UserOnboardingTaskProgress
+                    .Where(p => p.UserId == userId)
+                    .ToListAsync();
+
+                // Only create tasks if user doesn't already have any
+                if (!existingTaskProgress.Any())
+                {
+                    var tasks = await _context.OnboardingTasks.ToListAsync();
+                    foreach (var task in tasks)
+                    {
+                        _context.UserOnboardingTaskProgress.Add(new Models.Onboarding.UserOnboardingTaskProgress
+                        {
+                            UserId = userId,
+                            TaskId = task.Id,
+                            Status = "pending",
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Onboarding tasks assigned to user {UserId}", userId);
+                }
+            }
+
             _logger.LogInformation("Role '{RoleName}' assigned to user {UserId} by SuperAdmin", request.RoleName, userId);
             return Ok(new { message = $"Role '{request.RoleName}' assigned successfully" });
         }
@@ -174,6 +200,22 @@ public class RoleManagementController : ControllerBase
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return BadRequest(new { message = "Failed to remove role", errors });
+            }
+
+            // If removing "User" role, delete all onboarding task progress records
+            // (User role is being changed to Admin/SuperAdmin who don't need onboarding tasks)
+            if (roleName == "User")
+            {
+                var taskProgress = await _context.UserOnboardingTaskProgress
+                    .Where(p => p.UserId == userId)
+                    .ToListAsync();
+
+                if (taskProgress.Any())
+                {
+                    _context.UserOnboardingTaskProgress.RemoveRange(taskProgress);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Onboarding tasks removed from user {UserId} (role changed from User)", userId);
+                }
             }
 
             _logger.LogInformation("Role '{RoleName}' removed from user {UserId} by SuperAdmin", roleName, userId);
