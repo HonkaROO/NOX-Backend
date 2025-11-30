@@ -528,7 +528,7 @@ public class OnboardingMaterialController : ControllerBase
         {
             throw new ArgumentException($"URL is not in a valid format: {url}", nameof(url), ex);
         }
-    } 
+    }
 
     /// <summary>
     /// Lists all blobs in the Azure Blob Storage container.
@@ -545,24 +545,24 @@ public class OnboardingMaterialController : ControllerBase
     /// This endpoint does NOT save to database - it's for AI knowledge base only.
     /// Files uploaded via this endpoint won't appear in user-facing document management.
     /// </summary>
-    /// <param name="file">The file to upload (PDF, JSON, or Markdown only).</param>
+    /// <param name="request">The knowledge injection request with file.</param>
     /// <returns>The Azure Blob Storage URL of the uploaded file.</returns>
     [HttpPost("inject-knowledge")]
     [Authorize(Roles = "SuperAdmin,Admin")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<object>> InjectKnowledge([FromForm] IFormFile file)
+    public async Task<ActionResult<object>> InjectKnowledge([FromForm] InjectKnowledgeRequest request)
     {
         try
         {
             // Validate file
-            var validationResult = ValidateFile(file);
+            var validationResult = ValidateFile(request.File);
             if (validationResult != null)
             {
                 return validationResult;
             }
 
             // Additional validation: Only allow AI-indexable file types
-            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
             if (fileExtension != ".pdf" && fileExtension != ".json" && fileExtension != ".md")
             {
                 return BadRequest(new
@@ -573,16 +573,16 @@ public class OnboardingMaterialController : ControllerBase
 
             // Generate unique blob name with "knowledge-base" prefix to distinguish from regular materials
             string blobName = AzureBlobStorageService.GenerateUniqueBlobName(
-                file.FileName,
+                request.File.FileName,
                 prefix: "knowledge-base"
             );
 
             // Upload file to Azure Blob Storage
-            string fileUrl = await _blobStorageService.UploadFileAsync(file, blobName);
+            string fileUrl = await _blobStorageService.UploadFileAsync(request.File, blobName);
 
             _logger.LogInformation(
                 "File '{FileName}' uploaded successfully for knowledge injection at URL: {Url}",
-                file.FileName,
+                request.File.FileName,
                 fileUrl
             );
 
@@ -590,8 +590,8 @@ public class OnboardingMaterialController : ControllerBase
             return Ok(new
             {
                 url = fileUrl,
-                fileName = file.FileName,
-                fileSize = file.Length,
+                fileName = request.File.FileName,
+                fileSize = request.File.Length,
                 message = "File uploaded successfully. Ready for knowledge injection."
             });
         }
